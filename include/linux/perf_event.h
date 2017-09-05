@@ -499,9 +499,9 @@ struct perf_addr_filter_range {
 };
 
 /**
- * enum perf_event_active_state - the states of a event
+ * enum perf_event_state - the states of a event
  */
-enum perf_event_active_state {
+enum perf_event_state {
 	PERF_EVENT_STATE_DORMANT	= -5,
 	PERF_EVENT_STATE_DEAD		= -4,
 	PERF_EVENT_STATE_EXIT		= -3,
@@ -600,7 +600,7 @@ struct perf_event {
 	struct pmu			*pmu;
 	void				*pmu_private;
 
-	enum perf_event_active_state	state;
+	enum perf_event_state		state;
 	unsigned int			attach_state;
 	local64_t			count;
 	atomic64_t			child_count;
