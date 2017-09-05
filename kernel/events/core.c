@@ -2123,8 +2123,9 @@ event_sched_in(struct perf_event *event,
 
 	WRITE_ONCE(event->oncpu, smp_processor_id());
 	/*
-	 * Order event::oncpu write to happen before the ACTIVE state
-	 * is visible.
+	 * Order event::oncpu write to happen before the ACTIVE state is
+	 * visible. This allows perf_event_{stop,read}() to observe the correct
+	 * ->oncpu if it sees ACTIVE.
 	 */
 	smp_wmb();
 	perf_event_set_state(event, PERF_EVENT_STATE_ACTIVE);
@@ -3686,8 +3687,7 @@ static void __perf_event_read(void *info)
 
 	pmu->read(event);
 
-	list_for_each_entry(sub, &event->sibling_list, group_entry) {
-		update_event_times(sub);
+	for_each_sibling_event(sub, event) {
 		if (sub->state == PERF_EVENT_STATE_ACTIVE) {
 			/*
 			 * Use sibling's PMU rather than @event's since
@@ -3787,6 +3787,7 @@ out:
 
 static int perf_event_read(struct perf_event *event, bool group)
 {
+	enum perf_event_state state = READ_ONCE(event->state);
 	int event_cpu, ret = 0;
 	bool active_event_skip_read = false;
 	bool readable;
@@ -3795,13 +3796,20 @@ static int perf_event_read(struct perf_event *event, bool group)
 	 * If event is enabled and currently active on a CPU, update the
 	 * value in the event structure:
 	 */
-	event_cpu = READ_ONCE(event->oncpu);
-
 	preempt_disable();
-	readable = cpumask_test_cpu(smp_processor_id(),
-				    &event->readable_on_cpus);
 
-	if (event->state == PERF_EVENT_STATE_ACTIVE) {
+	if (state == PERF_EVENT_STATE_ACTIVE) {
+
+		/*
+		 * Orders the ->state and ->oncpu loads such that if we see
+		 * ACTIVE we must also see the right ->oncpu.
+		 *
+		 * Matches the smp_wmb() from event_sched_in().
+		 */
+		smp_rmb();
+		event_cpu = READ_ONCE(event->oncpu);
+		readable = cpumask_test_cpu(smp_processor_id(),
+				    &event->readable_on_cpus);
 		if ((unsigned int)event_cpu >= nr_cpu_ids) {
 			preempt_enable();
 			return 0;
@@ -3811,8 +3819,7 @@ static int perf_event_read(struct perf_event *event, bool group)
 				per_cpu(is_hotplugging, event_cpu))
 			active_event_skip_read = true;
 	}
-
-	if (event->state == PERF_EVENT_STATE_ACTIVE &&
+	if (state == PERF_EVENT_STATE_ACTIVE &&
 		!active_event_skip_read) {
 		struct perf_read_data data = {
 			.event = event,
@@ -3835,7 +3842,7 @@ static int perf_event_read(struct perf_event *event, bool group)
 		(void)smp_call_function_single(event_cpu,
 				__perf_event_read, &data, 1);
 		ret = data.ret;
-	} else if (event->state == PERF_EVENT_STATE_INACTIVE ||
+	} else if (state == PERF_EVENT_STATE_INACTIVE ||
 			(active_event_skip_read &&
 			!per_cpu(is_hotplugging, event_cpu))) {
 		struct perf_event_context *ctx = event->ctx;
@@ -3843,9 +3850,8 @@ static int perf_event_read(struct perf_event *event, bool group)
 
 		raw_spin_lock_irqsave(&ctx->lock, flags);
 		/*
-		 * may read while context is not active
-		 * (e.g., thread is blocked), in that case
-		 * we cannot update context time
+		 * May read while context is not active (e.g., thread is
+		 * blocked), in that case we cannot update context time
 		 */
 		if (ctx->is_active & EVENT_TIME) {
 			update_context_time(ctx);
