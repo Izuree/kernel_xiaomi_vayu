@@ -48,6 +48,8 @@ EXPORT_SYMBOL_GPL(arm_cpuidle_suspend);
 
 #include <acpi/processor.h>
 
+#define ARM64_LPI_IS_RETENTION_STATE(arch_flags) (!(arch_flags))
+
 int acpi_processor_ffh_lpi_probe(unsigned int cpu)
 {
 	return arm_cpuidle_init(cpu);
@@ -55,6 +57,10 @@ int acpi_processor_ffh_lpi_probe(unsigned int cpu)
 
 int acpi_processor_ffh_lpi_enter(struct acpi_lpi_state *lpi)
 {
-	return CPU_PM_CPU_IDLE_ENTER(arm_cpuidle_suspend, lpi->index);
+	if (ARM64_LPI_IS_RETENTION_STATE(lpi->arch_flags))
+		return CPU_PM_CPU_IDLE_ENTER_RETENTION(arm_cpuidle_suspend,
+						lpi->index);
+	else
+		return CPU_PM_CPU_IDLE_ENTER(arm_cpuidle_suspend, lpi->index);
 }
 #endif
