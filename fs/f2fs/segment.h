@@ -752,11 +752,6 @@ static inline void set_to_next_sit(struct sit_info *sit_i, unsigned int start)
 #endif
 }
 
-static inline time64_t ktime_get_boottime_seconds(void)
-{
-	return ktime_divns(ktime_get_boottime(), NSEC_PER_SEC);
-}
-
 static inline unsigned long long get_mtime(struct f2fs_sb_info *sbi,
 						bool base_time)
 {
