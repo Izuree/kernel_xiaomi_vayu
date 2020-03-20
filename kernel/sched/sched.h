@@ -1029,8 +1029,7 @@ struct rq {
 	unsigned long cpu_load[CPU_LOAD_IDX_MAX];
 #ifdef CONFIG_NO_HZ_COMMON
 #ifdef CONFIG_SMP
-	unsigned long last_load_update_tick;
-	unsigned long last_blocked_load_update_tick;
+	unsigned long		last_blocked_load_update_tick;
 	unsigned int		has_blocked_load;
 	call_single_data_t	nohz_csd;
 #endif /* CONFIG_SMP */
