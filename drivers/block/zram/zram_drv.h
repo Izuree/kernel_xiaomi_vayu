@@ -56,14 +56,10 @@ enum zram_pageflags {
 
 /*-- Data structures */
 
-struct zram_entry {
-	unsigned long handle;
-};
-
 /* Allocated for each disk page */
 struct zram_table_entry {
 	union {
-		struct zram_entry *entry;
+		unsigned long handle;
 		unsigned long element;
 	};
 	unsigned long flags;
@@ -82,6 +78,7 @@ struct zram_stats {
 	atomic64_t notify_free;	/* no. of swap slot free notifications */
 	atomic64_t same_pages;		/* no. of same element filled pages */
 	atomic64_t huge_pages;		/* no. of huge pages */
+	atomic64_t huge_pages_since;	/* no. of huge pages since zram set up */
 	atomic64_t pages_stored;	/* no. of pages currently stored */
 	atomic_long_t max_used_pages;	/* no. of maximum pages stored */
 	atomic64_t writestall;		/* no. of write slow paths */
@@ -122,7 +119,6 @@ struct zram {
 	bool wb_limit_enable;
 	u64 bd_wb_limit;
 	struct block_device *bdev;
-	unsigned int old_block_size;
 	unsigned long *bitmap;
 	unsigned long nr_pages;
 #endif
