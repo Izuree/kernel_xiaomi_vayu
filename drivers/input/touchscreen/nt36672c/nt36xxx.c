@@ -2338,7 +2338,7 @@ static void nvt_ts_worker(struct work_struct *work)
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
 		mutex_unlock(&ts->lock);
-		return;
+		return IRQ_HANDLED;
 	}
 #endif
 
@@ -2514,7 +2514,7 @@ static void nvt_ts_worker_pressure(struct work_struct *work)
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
 		mutex_unlock(&ts->lock);
-		return;
+		return IRQ_HANDLED;
 	}
 #endif
 
