@@ -1,4 +1,3 @@
-
 #define pr_fmt(fmt)	"[USBPD-PM]: %s: " fmt, __func__
 
 #include <linux/module.h>
@@ -1258,7 +1257,7 @@ static void usbpd_pd_contact(struct usbpd_pm *pdpm, bool connected)
 	if (connected) {
 		usbpd_pm_evaluate_src_caps(pdpm);
 		if (pdpm->pps_supported)
-			schedule_delayed_work(&pdpm->pm_work, 0);
+			queue_delayed_work(system_power_efficient_wq, &pdpm->pm_work, 0);
 	} else {
 		usbpd_pm_disconnect(pdpm);
 	}
@@ -1273,7 +1272,7 @@ static void usbpd_pps_non_verified_contact(struct usbpd_pm *pdpm, bool connected
 	if (connected) {
 		usbpd_pm_evaluate_src_caps(pdpm);
 		if (pdpm->pps_supported)
-			schedule_delayed_work(&pdpm->pm_work, 5*HZ);
+			queue_delayed_work(system_power_efficient_wq, &pdpm->pm_work, 5*HZ);
 	} else {
 		usbpd_pm_disconnect(pdpm);
 	}
@@ -1296,7 +1295,7 @@ static void cp_psy_change_work(struct work_struct *work)
 		pdpm->cp.vbus_pres = val.intval;
 
 	if (!ac_pres && pdpm->cp.vbus_pres)
-		schedule_delayed_work(&pdpm->pm_work, 0);
+		queue_delayed_work(system_power_efficient_wq, &pdpm->pm_work, 0);
 #endif
 	pdpm->psy_change_running = false;
 }
