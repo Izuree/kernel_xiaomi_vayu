@@ -1066,39 +1066,8 @@ static inline bool min_vruntime_update(struct sched_entity *se, bool exit)
 	       se->max_slice == old_max_slice;
 }
 
-static void min_vruntime_cb_propagate(struct rb_node *rb, struct rb_node *stop)
-{
-	while (rb != stop) {
-		struct sched_entity *se = __node_2_se(rb);
-		if (min_vruntime_update(se, false))
-			break;
-		rb = rb_parent(rb);
-	}
-}
-static void min_vruntime_cb_copy(struct rb_node *rb_old, struct rb_node *rb_new)
-{
-	struct sched_entity *old = __node_2_se(rb_old);
-	struct sched_entity *new = __node_2_se(rb_new);
-	new->min_vruntime = old->min_vruntime;
-	new->min_slice    = old->min_slice;
-	new->max_slice    = old->max_slice;
-}
-static void min_vruntime_cb_rotate(struct rb_node *rb_old, struct rb_node *rb_new)
-{
-	struct sched_entity *old = __node_2_se(rb_old);
-	struct sched_entity *new = __node_2_se(rb_new);
-
-	new->min_vruntime = old->min_vruntime;
-	new->min_slice    = old->min_slice;
-	new->max_slice    = old->max_slice;
-
-	min_vruntime_update(old, false);
-}
-static const struct rb_augment_callbacks min_vruntime_cb = {
-	.propagate = min_vruntime_cb_propagate,
-	.copy      = min_vruntime_cb_copy,
-	.rotate    = min_vruntime_cb_rotate,
-};
+RB_DECLARE_CALLBACKS(static, min_vruntime_cb, struct sched_entity,
+		     run_node, min_vruntime, min_vruntime_update);
 
 /*
  * Enqueue an entity into the rb-tree:
