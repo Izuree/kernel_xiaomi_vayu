@@ -124,7 +124,6 @@ struct scm_hdcp_req {
 };
 
 extern struct mutex scm_lmh_lock;
-extern bool under_scm_call(void);
 
 #else
 
@@ -183,10 +182,6 @@ static inline bool scm_is_secure_device(void)
 	return false;
 }
 
-extern bool under_scm_call(void)
-{
-	return false;
-}
 #endif
 
 #if defined(CONFIG_QCOM_SCM)
