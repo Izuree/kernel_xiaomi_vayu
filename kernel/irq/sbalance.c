@@ -256,6 +256,8 @@ static void balance_irqs(void)
 			continue;
 		}
 
+		/* Add this IRQ to its CPU's list of movable IRQs */
+		bd = per_cpu_ptr(&balance_data, cpu);
 		list_add_tail(&bi->move_node, &bd->movable_irqs);
 	}
 
@@ -350,9 +352,9 @@ struct process_timer {
 	struct task_struct *task;
 };
 
-static void process_timeout(struct timer_list *t)
+static void process_timeout(unsigned long data)
 {
-	struct process_timer *timeout = from_timer(timeout, t, timer);
+	struct process_timer *timeout = (struct process_timer *)data;
 
 	wake_up_process(timeout->task);
 }
@@ -368,7 +370,7 @@ static void sbalance_wait(long poll_jiffies)
 	freezer_do_not_count();
 	__set_current_state(TASK_IDLE);
 	timer.task = current;
-	timer_setup_on_stack(&timer.timer, process_timeout, TIMER_DEFERRABLE);
+	setup_deferrable_timer_on_stack(&timer.timer, process_timeout, (unsigned long)&timer);
 	timer.timer.expires = jiffies + poll_jiffies;
 	add_timer(&timer.timer);
 	schedule();
