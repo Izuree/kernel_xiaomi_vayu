@@ -293,6 +293,29 @@ enum WMI_RECORD_TYPE {
 
 #endif /*WMI_INTERFACE_EVENT_LOGGING */
 
+#ifndef wmi_nofl_err
+#define wmi_nofl_err(params...) no_printk(params)
+#endif
+#ifndef wmi_nofl_debug
+#define wmi_nofl_debug(params...) no_printk(params)
+#endif
+#ifndef wmi_err_rl
+#define wmi_err_rl(params...) no_printk(params)
+#endif
+#ifndef wmi_warn
+#define wmi_warn(params...) no_printk(params)
+#endif
+#ifndef wmi_info
+#define wmi_info(params...) no_printk(params)
+#endif
+#ifndef wmi_err
+#define wmi_err(params...) no_printk(params)
+#endif
+#ifndef wmi_debug
+#define wmi_debug(params...) no_printk(params)
+#endif
+
+
 #ifdef WLAN_OPEN_SOURCE
 struct fwdebug {
 	struct sk_buff_head fwlog_queue;

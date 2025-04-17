@@ -190,3 +190,7 @@ void hdd_sysfs_destroy_adapter_root_obj(struct hdd_adapter *adapter)
 }
 #endif
 #endif
+#ifndef WLAN_SYSFS
+inline void hdd_sysfs_create_adapter_root_obj(struct hdd_adapter *adapter) {}
+inline void hdd_sysfs_destroy_adapter_root_obj(struct hdd_adapter *adapter) {}
+#endif
