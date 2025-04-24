@@ -546,6 +546,8 @@ extern void lock_unpin_lock(struct lockdep_map *lock, struct pin_cookie);
 
 #else /* !CONFIG_LOCKDEP */
 
+struct lockdep_map { };
+
 static inline void lockdep_off(void)
 {
 }
