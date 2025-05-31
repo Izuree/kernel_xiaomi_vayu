@@ -23,6 +23,7 @@
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
+#include <drm/drm_refresh_rate.h>
 
 static DEFINE_SPINLOCK(tz_lock);
 static DEFINE_SPINLOCK(sample_lock);
@@ -57,8 +58,6 @@ static DEFINE_SPINLOCK(suspend_lock);
 #define TZ_V2_UPDATE_WITH_CA_ID_64 0xD
 
 #define TAG "msm_adreno_tz: "
-
-#define DEFAULT_LOAD_THRESHOLD_PCT 60
 
 static u64 suspend_time;
 static u64 suspend_start;
@@ -139,47 +138,6 @@ static const struct device_attribute *adreno_tz_attr_list[] = {
 		&dev_attr_suspend_time,
 		NULL
 };
-
-/*
- * shape_load - load curve with triangular headroom, mirroring the
- * sugov dvfs_headroom design.
- *
- * Below threshold: linear pass-through (no suppression of moderate load).
- * A triangular headroom term is added on top, peaking at busy == threshold
- * and tapering linearly to zero at busy == 0 and busy == total. This gives
- * the strongest boost to loads sitting right at/near the threshold band
- * (typical UI compositing range), encouraging a quick burst-to-idle.
- */
-static u64 shape_load(u64 busy, u64 total)
-{
-	u64 threshold_abs;
-	u64 delta_t, headroom, side;
-
-	if (total == 0)
-		return busy;
-
-	threshold_abs = div64_u64(total * DEFAULT_LOAD_THRESHOLD_PCT, 100);
-
-	/* delta_t ~= total * 220 / 1024, matching sugov's headroom span */
-	delta_t = (total * 220) >> 10;
-
-	if (busy <= threshold_abs) {
-		/* rising edge: 0 at busy=0, delta_t at busy=threshold */
-		if (threshold_abs == 0)
-			headroom = 0;
-		else
-			headroom = div64_u64(delta_t * busy, threshold_abs);
-	} else {
-		/* falling edge: delta_t at busy=threshold, 0 at busy=total */
-		side = total - threshold_abs;
-		if (side == 0)
-			headroom = 0;
-		else
-			headroom = div64_u64(delta_t * (total - busy), side);
-	}
-
-	return min(busy + headroom, total);
-}
 
 void compute_work_load(struct devfreq_dev_status *stats,
 		struct devfreq_msm_adreno_tz_data *priv,
@@ -429,12 +387,19 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 			priv->bin.busy_time > CEILING) {
 		val = -1 * level;
 	} else {
+		unsigned int refresh_rate = dsi_panel_get_refresh_rate();
 
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
-		scm_data[2] = (unsigned int)shape_load(
-				(u64)priv->bin.busy_time,
-				(u64)priv->bin.total_time);
+		if (refresh_rate >= 144) {
+			scm_data[2] = priv->bin.busy_time + (priv->bin.busy_time >> 1) + (priv->bin.busy_time >> 3);
+		} else if (refresh_rate >= 120) {
+			scm_data[2] = priv->bin.busy_time + (priv->bin.busy_time >> 1);
+		} else if (refresh_rate >= 90) {
+			scm_data[2] = priv->bin.busy_time + (priv->bin.busy_time >> 2);
+		} else {
+			scm_data[2] = priv->bin.busy_time;
+		}
 		scm_data[3] = context_count;
 		__secure_tz_update_entry3(scm_data, sizeof(scm_data),
 					&val, sizeof(val), priv);
