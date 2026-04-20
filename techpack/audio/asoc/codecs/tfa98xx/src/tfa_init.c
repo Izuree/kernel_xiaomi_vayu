@@ -25,6 +25,11 @@
 #define TFA98XX_CURRENTSENSE4_CTRL_CLKGATECFOFF (1 << 2)
 #define TFA98XX_CURRENTSENSE4 0x49
 
+#undef pr_info
+#undef pr_err
+#define pr_info pr_debug
+#define pr_err pr_debug
+
 /***********************************************************************************/
 /* GLOBAL (Defaults)                                                               */
 /***********************************************************************************/

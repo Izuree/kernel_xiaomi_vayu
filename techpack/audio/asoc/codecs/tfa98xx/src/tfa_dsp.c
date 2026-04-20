@@ -30,6 +30,11 @@
 /* handle macro for bitfield */
 #define TFA_MK_BF(reg, pos, len) ((reg << 8) | (pos << 4) | (len - 1))
 
+#undef pr_info
+#undef pr_err
+#define pr_info pr_debug
+#define pr_err pr_debug
+
 /* abstract family for register */
 #define FAM_TFA98XX_CF_CONTROLS (TFA_FAM(tfa, RST) >> 8)
 #define FAM_TFA98XX_CF_MEM (TFA_FAM(tfa, MEMA) >> 8)
