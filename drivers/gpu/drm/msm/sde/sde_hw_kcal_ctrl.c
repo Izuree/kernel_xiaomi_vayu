@@ -97,7 +97,10 @@ static ssize_t store_##node(struct device *dev,			\
 }									\
 									\
 create_one_rw_node(node)
-
+/*	NOTICE NOTICE NOTICE
+	im deu, message for you, kcal sysfs 
+	creation moved to ../msm_kcal_compat.c
+	
 static ssize_t show_kcal(struct device *dev,
 			 struct device_attribute *attr,
 			 char *buf)
@@ -139,6 +142,7 @@ define_one_kcal_node(kcal_hue, hsic.hue, 0, 1536);
 define_one_kcal_node(kcal_sat, hsic.saturation, 128, 383);
 define_one_kcal_node(kcal_val, hsic.value, 128, 383);
 define_one_kcal_node(kcal_cont, hsic.contrast, 128, 383);
+	
 
 static int sde_hw_kcal_ctrl_probe(struct platform_device *pdev)
 {
@@ -155,6 +159,7 @@ static int sde_hw_kcal_ctrl_probe(struct platform_device *pdev)
 		pr_err("Unable to create sysfs nodes\n");
 
 	return ret;
+
 }
 
 static int sde_hw_kcal_ctrl_remove(struct platform_device *pdev)
@@ -203,3 +208,4 @@ static int __init sde_hw_kcal_ctrl_init(void)
 	return 0;
 }
 late_initcall(sde_hw_kcal_ctrl_init);
+*/
