@@ -34,6 +34,7 @@
 #include "sde_dbg.h"
 #include "dsi_parser.h"
 #include "dsi_phy.h"
+#include <linux/e404_attributes.h>
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
@@ -7764,7 +7765,14 @@ int dsi_display_post_enable(struct dsi_display *display)
 	if (display->config.panel_mode == DSI_OP_CMD_MODE)
 		dsi_display_clk_ctrl(display->dsi_clk_handle,
 			DSI_ALL_CLKS, DSI_CLK_OFF);
-
+			
+	if (e404_data.dtbo_type) {
+        display->panel->cur_mode->timing.clk_rate_hz = 1300000000;
+        display->panel->cur_mode->priv_info->clk_rate_hz = 1300000000;
+        rc = dsi_display_update_dsi_bitrate(display, 1300000000);
+        if (rc)
+            pr_err("e404: failed to ramp clk_rate, rc=%d\n", rc);
+    }
 	mutex_unlock(&display->display_lock);
 	return rc;
 }
@@ -7839,6 +7847,10 @@ int dsi_display_disable(struct dsi_display *display)
 		if (rc)
 			pr_err("[%s] failed to disable DSI panel, rc=%d\n",
 			       display->name, rc);
+	}
+	if (e404_data.dtbo_type) {
+    	display->panel->cur_mode->timing.clk_rate_hz = 0;
+    	display->panel->cur_mode->priv_info->clk_rate_hz = 0;
 	}
 
 	mutex_unlock(&display->display_lock);
