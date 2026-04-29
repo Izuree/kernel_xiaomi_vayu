@@ -7766,7 +7766,7 @@ int dsi_display_post_enable(struct dsi_display *display)
 		dsi_display_clk_ctrl(display->dsi_clk_handle,
 			DSI_ALL_CLKS, DSI_CLK_OFF);
 			
-	if (e404_data.dtbo_type) {
+	if (e404_data.dtbo130) {
         display->panel->cur_mode->timing.clk_rate_hz = 1300000000;
         display->panel->cur_mode->priv_info->clk_rate_hz = 1300000000;
         rc = dsi_display_update_dsi_bitrate(display, 1300000000);
@@ -7848,7 +7848,7 @@ int dsi_display_disable(struct dsi_display *display)
 			pr_err("[%s] failed to disable DSI panel, rc=%d\n",
 			       display->name, rc);
 	}
-	if (e404_data.dtbo_type) {
+	if (e404_data.dtbo130) {
     	display->panel->cur_mode->timing.clk_rate_hz = 0;
     	display->panel->cur_mode->priv_info->clk_rate_hz = 0;
 	}

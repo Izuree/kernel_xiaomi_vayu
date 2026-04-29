@@ -887,7 +887,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 		       rc);
 		goto error;
 	}
-	if (e404_data.dtbo_type)
+	if (e404_data.dtbo130)
     	mode->refresh_rate = 130;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-width",
@@ -905,7 +905,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 		       rc);
 		goto error;
 	}
-	if (e404_data.dtbo_type)
+	if (e404_data.dtbo130)
     	mode->h_front_porch = 45;
 
 
@@ -917,7 +917,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 		       rc);
 		goto error;
 	}
-	if (e404_data.dtbo_type)
+	if (e404_data.dtbo130)
     	mode->h_back_porch = 30;
 
 	rc = utils->read_u32(utils->data,
@@ -953,7 +953,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 		       rc);
 		goto error;
 	}
-	if (e404_data.dtbo_type)
+	if (e404_data.dtbo130)
     	mode->v_back_porch = 22;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-v-front-porch",
@@ -963,7 +963,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 		       rc);
 		goto error;
 	}
-	if (e404_data.dtbo_type)
+	if (e404_data.dtbo130)
     	mode->v_front_porch = 24;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-v-pulse-width",
@@ -1492,7 +1492,7 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		goto error;
 	}
 
-	if (e404_data.dtbo_type) {
+	if (e404_data.dtbo130) {
     	static const u32 e404_dfps_list[] = { 130,60 };
     	dfps_caps->dfps_list_len = ARRAY_SIZE(e404_dfps_list);
     	dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len,
