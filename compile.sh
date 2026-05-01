@@ -108,7 +108,7 @@ done
 # Set kernel image paths
 K_IMG="$KERNEL_DIR/out/arch/arm64/boot/Image"
 K_DTBO="$KERNEL_DIR/out/arch/arm64/boot/dtbo.img"
-K_DTB="$KERNEL_DIR/out/arch/arm64/boot/dts/qcom/sm8150p-v2-xiaomi.dtb"
+K_DTB="$KERNEL_DIR/out/arch/arm64/boot/dtb.img"
 
 # Telegram configuration - Load from external file
 TELEGRAM_CONFIG="$BASE_DIR/kernel_build"
