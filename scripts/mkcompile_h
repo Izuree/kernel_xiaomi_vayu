@@ -5,7 +5,7 @@ TARGET=$1
 ARCH=$2
 SMP=$3
 PREEMPT=$4
-CC=$5
+CC_VERSION="$5"
 LD=$6
 
 vecho() { [ "${quiet}" = "silent_" ] || echo "$@" ; }
@@ -29,12 +29,7 @@ LC_ALL=C
 export LC_ALL
 
 if [ -z "$KBUILD_BUILD_VERSION" ]; then
-	if [ -r .version ]; then
-		VERSION=`cat .version`
-	else
-		VERSION=0
-		echo 0 > .version
-	fi
+	VERSION=$(cat .version 2>/dev/null || echo 1)
 else
 	VERSION=$KBUILD_BUILD_VERSION
 fi
@@ -77,12 +72,27 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
 
   echo \#define LINUX_COMPILE_BY \"`echo $LINUX_COMPILE_BY | $UTS_TRUNCATE`\"
   echo \#define LINUX_COMPILE_HOST \"`echo $LINUX_COMPILE_HOST | $UTS_TRUNCATE`\"
+  if [ -z "$KBUILD_COMPILER_STRING" ]; then
+    CC_VERSION=$($CC -v 2>&1 | grep ' version ' | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
+  else
+    CC_VERSION="$KBUILD_COMPILER_STRING"
+  fi
 
-  CC_VERSION=$($CC -v 2>&1 | grep ' version ' | sed 's/[[:space:]]*$//')
-  LD_VERSION=$($LD -v | head -n1 | sed 's/(compatible with [^)]*)//' \
-		      | sed 's/[[:space:]]*$//')
+# Sexify kernel string 
+CC_VERSION=$(echo "$CC_VERSION" \
+  | sed -E 's/\bversion \b//I' \
+  | sed -E 's/\bclang\b/Clang/I' \
+  | sed -E 's/\bgcc\b/GCC/I' \
+  | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)git/\1/' \
+  | sed -E 's/ClangBuiltLinux[[:space:]]*//g')
+
+LD_VERSION=$($LD -v | head -n1 | sed 's/(compatible with [^)]*)//' \
+		      | perl -pe 's/\(http.*?\)//gs; s/\s*\(\/[^)]*\)//g' \
+		      | sed 's/[[:space:]]*$//' \
+		      | sed -E 's/ClangBuiltLinux[[:space:]]*//g')
+
   printf '#define LINUX_COMPILER "%s"\n' "$CC_VERSION, $LD_VERSION"
-) > .tmpcompile
+  ) > .tmpcompile
 
 # Only replace the real compile.h if the new one is different,
 # in order to preserve the timestamp and avoid unnecessary

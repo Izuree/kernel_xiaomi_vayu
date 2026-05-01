@@ -39,6 +39,8 @@
 #include "clk-voter.h"
 #include "clk-debug.h"
 
+#include <linux/e404_attributes.h>
+
 #define OSM_INIT_RATE			300000000UL
 #define XO_RATE				19200000UL
 #define OSM_TABLE_SIZE			40
@@ -90,7 +92,37 @@ static bool is_sm6150;
 static bool is_sdmmagpie;
 static bool is_trinket;
 static bool is_atoll;
+static const unsigned long osm_freq_min_normal[] = {
+	[0] = 300000000UL,
+	[1] = 300000000UL,
+	[2] = 710400000UL,
+	[3] = 825600000UL,
+};
 
+static const unsigned long osm_freq_max_normal[] = {
+	[0] = ULONG_MAX,
+	[1] = 1785600000UL,
+	[2] = 2419200000UL,
+	[3] = 2956800000UL,  /* uncapped */
+};
+
+static const unsigned long osm_freq_min_eff[] = {
+	[0] = 110000000UL,
+	[1] = 1100000000UL,
+	[2] = 710400000UL,
+	[3] = 825600000UL,
+};
+
+static const unsigned long osm_freq_max_eff[] = {
+	[0] = ULONG_MAX,
+	[1] = 1785600000UL,
+	[2] = 2319200000UL,
+	[3] = 2496000000UL,  /* capped prime */
+};
+
+/* pointers, selected at probe time */
+static const unsigned long *osm_freq_min;
+static const unsigned long *osm_freq_max;
 static inline struct clk_osm *to_clk_osm(struct clk_hw *_hw)
 {
 	return container_of(_hw, struct clk_osm, hw);
@@ -661,36 +693,40 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		return -ENOMEM;
 
 	for (i = 0; i < parent->osm_table_size; i++) {
-		u32 data, src, div, lval, core_count;
+    u32 data, src, div, lval, core_count;
 
-		data = clk_osm_read_reg(c, FREQ_REG + i * OSM_REG_SIZE);
-		src = (data & GENMASK(31, 30)) >> 30;
-		div = (data & GENMASK(29, 28)) >> 28;
-		lval = data & GENMASK(7, 0);
-		core_count = CORE_COUNT_VAL(data);
+    data = clk_osm_read_reg(c, FREQ_REG + i * OSM_REG_SIZE);
+    src = (data & GENMASK(31, 30)) >> 30;
+    div = (data & GENMASK(29, 28)) >> 28;
+    lval = data & GENMASK(7, 0);
+    core_count = CORE_COUNT_VAL(data);
 
-		/* Save the frequencies in terms of KHz */
-		if (!src)
-			table[i].frequency = OSM_INIT_RATE / 1000;
-		else
-			table[i].frequency = (XO_RATE * lval) / 1000;
-		table[i].driver_data = table[i].frequency;
+    if (!src)
+        table[i].frequency = OSM_INIT_RATE / 1000;
+    else
+        table[i].frequency = (XO_RATE * lval) / 1000;
+    table[i].driver_data = table[i].frequency;
 
-		if (core_count == SINGLE_CORE_COUNT)
-			table[i].frequency = CPUFREQ_ENTRY_INVALID;
+    if (core_count == SINGLE_CORE_COUNT)
+        table[i].frequency = CPUFREQ_ENTRY_INVALID;
 
-		/* Two of the same frequencies means end of table */
-		if (i > 0 && table[i - 1].driver_data == table[i].driver_data) {
-			struct cpufreq_frequency_table *prev = &table[i - 1];
+    /* Two of the same frequencies means end of table */
+    if (i > 0 && table[i-1].driver_data == table[i].driver_data) {
+        struct cpufreq_frequency_table *prev = &table[i-1];
+        if (prev->frequency == CPUFREQ_ENTRY_INVALID) {
+            prev->flags = CPUFREQ_BOOST_FREQ;
+            prev->frequency = prev->driver_data;
+        }
+        break;
+    }
 
-			if (prev->frequency == CPUFREQ_ENTRY_INVALID) {
-				prev->flags = CPUFREQ_BOOST_FREQ;
-				prev->frequency = prev->driver_data;
-			}
-
-			break;
-		}
-	}
+    /* per-cluster frequency cap — osm_freq_max[] is in Hz, table in kHz */
+    if (table[i].driver_data >
+        osm_freq_max[parent->cluster_num] / 1000) {
+        table[i].frequency = CPUFREQ_TABLE_END;
+        break;
+    }
+}
 	table[i].frequency = CPUFREQ_TABLE_END;
 
 	ret = cpufreq_table_validate_and_show(policy, table);
@@ -967,12 +1003,19 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 						       GFP_KERNEL);
 	if (!osm_clks_init[c->cluster_num].rate_max)
 		return -ENOMEM;
+	int k = 0;
+	for (i = 0, k = 0; i < j; i++) {
+		unsigned long freq = c->osm_table[i].frequency;
 
-	for (i = 0; i < j; i++)
-		osm_clks_init[c->cluster_num].rate_max[i] =
-					c->osm_table[i].frequency;
-
-	c->num_entries = osm_clks_init[c->cluster_num].num_rate_max = j;
+		if (freq < osm_freq_min[c->cluster_num])
+			continue;
+		if (freq > osm_freq_max[c->cluster_num])
+			break;
+		c->osm_table[k] = c->osm_table[i];
+		osm_clks_init[c->cluster_num].rate_max[k] = freq;
+		k++;
+	}
+	c->num_entries = osm_clks_init[c->cluster_num].num_rate_max = k;
 	return 0;
 }
 
@@ -1106,6 +1149,16 @@ static void clk_cpu_osm_driver_sdmshrike_fixup(void)
 
 static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 {
+	/* select frequency table based on effcpu cmdline param */
+	if (e404_data.effcpu) {
+		osm_freq_min = osm_freq_min_eff;
+		osm_freq_max = osm_freq_max_eff;
+		pr_info("e404: effcpu enabled, using reduced frequency table\n");
+	} else {
+		osm_freq_min = osm_freq_min_normal;
+		osm_freq_max = osm_freq_max_normal;
+		pr_info("e404: effcpu disabled, using full frequency table\n");
+	}
 	int rc = 0, i;
 	u32 val;
 	int num_clks = ARRAY_SIZE(osm_qcom_clk_hws);

@@ -25,6 +25,10 @@
 #include "dsi_ctrl_hw.h"
 #include "dsi_parser.h"
 
+#ifdef CONFIG_E404_ATTRIBUTES
+#include <linux/e404_attributes.h>
+#endif
+
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -1732,8 +1736,24 @@ static int dsi_panel_parse_phy_props(struct dsi_panel *panel)
 	struct dsi_parser_utils *utils = &panel->utils;
 	const char *name = panel->name;
 
-	rc = utils->read_u32(utils->data,
-		  "qcom,mdss-pan-physical-width-dimension", &val);
+#ifdef CONFIG_E404_ATTRIBUTES
+    if (e404_data.dtbo_type == 1) {
+        props->panel_width_mm = e404_data.panel_width;
+		props->panel_height_mm = e404_data.panel_height;
+		pr_alert("E404: Overriding DTBO panel height & width for dtbo type 1");
+    } else if (e404_data.dtbo_type == 2) {
+		props->panel_width_mm = e404_data.panel_oem_width;
+		props->panel_height_mm = e404_data.panel_oem_height;
+		pr_alert("E404: Overriding DTBO panel height & width for dtbo type 2");
+	} else {
+        rc = utils->read_u32(utils->data, "qcom,mdss-pan-physical-width-dimension", &val);
+        props->panel_width_mm = val;
+		rc = utils->read_u32(utils->data, "qcom,mdss-pan-physical-height-dimension", &val);
+		props->panel_height_mm = val;
+		pr_alert("E404: Using default DTBO panel height & width");
+    }
+#else
+	rc = utils->read_u32(utils->data, "qcom,mdss-pan-physical-width-dimension", &val);
 	if (rc) {
 		pr_debug("[%s] Physical panel width is not defined\n", name);
 		props->panel_width_mm = 0;
@@ -1752,6 +1772,7 @@ static int dsi_panel_parse_phy_props(struct dsi_panel *panel)
 	} else {
 		props->panel_height_mm = val;
 	}
+#endif
 
 	str = utils->get_property(utils->data,
 			"qcom,mdss-dsi-panel-orientation", NULL);

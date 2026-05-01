@@ -12,8 +12,8 @@ obj-vdso := gettimeofday.o note.o sigreturn.o
 targets := $(obj-vdso) vdso.so vdso.so.dbg
 obj-vdso := $(addprefix $(obj)/, $(obj-vdso))
 
-ldflags-y := -shared -nostdlib -soname=linux-vdso.so.1  --hash-style=sysv \
-		--build-id -n -T
+VDSO_LDFLAGS := -shared -nostdlib -soname=linux-vdso.so.1  --hash-style=sysv \
+		--build-id -n
 ccflags-y += $(DISABLE_LTO)
 
 CFLAGS_REMOVE_vgettimeofday.o += $(CC_FLAGS_SCS)
@@ -30,7 +30,10 @@ $(obj)/vdso.o : $(obj)/vdso.so
 
 # Link rule for the .so file, .lds has to be first
 $(obj)/vdso.so.dbg: $(src)/vdso.lds $(obj-vdso)
-	$(call if_changed,ld)
+	$(call if_changed,vdso_ld)
+
+quiet_cmd_vdso_ld = LD      $@
+      cmd_vdso_ld = $(LD) $(VDSO_LDFLAGS) -T $(filter %.lds,$^) $(filter %.o,$^) -o $@
 
 # Strip rule for the .so file
 $(obj)/%.so: OBJCOPYFLAGS := -S
