@@ -561,44 +561,29 @@ static int af_alg_alloc_tsgl(struct sock *sk)
  * @offset Start the counting of SG entries from the given offset.
  * @return Number of TX SG entries found given the constraints
  */
-unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes, size_t offset)
+unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes)
 {
-	struct alg_sock *ask = alg_sk(sk);
-	struct af_alg_ctx *ctx = ask->private;
-	struct af_alg_tsgl *sgl, *tmp;
-	unsigned int i;
-	unsigned int sgl_count = 0;
+    const struct alg_sock *ask = alg_sk(sk);
+    const struct af_alg_ctx *ctx = ask->private;
+    const struct af_alg_tsgl *sgl, *tmp;
+    unsigned int i;
+    unsigned int sgl_count = 0;
 
-	if (!bytes)
-		return 0;
+    if (!bytes)
+        return 0;
 
-	list_for_each_entry_safe(sgl, tmp, &ctx->tsgl_list, list) {
-		struct scatterlist *sg = sgl->sg;
+    list_for_each_entry_safe(sgl, tmp, &ctx->tsgl_list, list) {
+        const struct scatterlist *sg = sgl->sg;
 
-		for (i = 0; i < sgl->cur; i++) {
-			size_t bytes_count;
+        for (i = 0; i < sgl->cur; i++) {
+            sgl_count++;
+            if (sg[i].length >= bytes)
+                return sgl_count;
 
-			/* Skip offset */
-			if (offset >= sg[i].length) {
-				offset -= sg[i].length;
-				bytes -= sg[i].length;
-				continue;
-			}
-
-			bytes_count = sg[i].length - offset;
-
-			offset = 0;
-			sgl_count++;
-
-			/* If we have seen requested number of bytes, stop */
-			if (bytes_count >= bytes)
-				return sgl_count;
-
-			bytes -= bytes_count;
-		}
-	}
-
-	return sgl_count;
+            bytes -= sg[i].length;
+        }
+    }
+    return sgl_count;
 }
 EXPORT_SYMBOL_GPL(af_alg_count_tsgl);
 
@@ -617,67 +602,50 @@ EXPORT_SYMBOL_GPL(af_alg_count_tsgl);
  * @dst_offset Reassign the TX SGL from given offset. All buffers before
  *	       reaching the offset is released.
  */
-void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst,
-		      size_t dst_offset)
+void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst)
 {
-	struct alg_sock *ask = alg_sk(sk);
-	struct af_alg_ctx *ctx = ask->private;
-	struct af_alg_tsgl *sgl;
-	struct scatterlist *sg;
-	unsigned int i, j = 0;
+    struct alg_sock *ask = alg_sk(sk);
+    struct af_alg_ctx *ctx = ask->private;
+    struct af_alg_tsgl *sgl, *tmp;
+    struct scatterlist *sg;
+    unsigned int i, j = 0;
 
-	while (!list_empty(&ctx->tsgl_list)) {
-		sgl = list_first_entry(&ctx->tsgl_list, struct af_alg_tsgl,
-				       list);
-		sg = sgl->sg;
+    list_for_each_entry_safe(sgl, tmp, &ctx->tsgl_list, list) {
+        sg = sgl->sg;
 
-		for (i = 0; i < sgl->cur; i++) {
-			size_t plen = min_t(size_t, used, sg[i].length);
-			struct page *page = sg_page(sg + i);
+        for (i = 0; i < sgl->cur; i++) {
+            unsigned int plen = min_t(size_t, used, sg[i].length);
+            struct page *page = sg_page(sg + i);
 
-			if (!page)
-				continue;
+            if (!page)
+                continue;
 
-			/*
-			 * Assumption: caller created af_alg_count_tsgl(len)
-			 * SG entries in dst.
-			 */
-			if (dst) {
-				if (dst_offset >= plen) {
-					/* discard page before offset */
-					dst_offset -= plen;
-				} else {
-					/* reassign page to dst after offset */
-					get_page(page);
-					sg_set_page(dst + j, page,
-						    plen - dst_offset,
-						    sg[i].offset + dst_offset);
-					dst_offset = 0;
-					j++;
-				}
-			}
+            if (dst) {
+                get_page(page);
+                sg_set_page(dst + j, page, plen, sg[i].offset);
+                j++;
+            }
 
-			sg[i].length -= plen;
-			sg[i].offset += plen;
+            sg[i].length -= plen;
+            sg[i].offset += plen;
 
-			used -= plen;
-			ctx->used -= plen;
+            used -= plen;
+            ctx->used -= plen;
 
-			if (sg[i].length)
-				return;
+            if (sg[i].length)
+                return;
 
-			put_page(page);
-			sg_assign_page(sg + i, NULL);
-		}
+            put_page(page);
+            sg_assign_page(sg + i, NULL);
+        }
 
-		list_del(&sgl->list);
-		sock_kfree_s(sk, sgl, sizeof(*sgl) + sizeof(sgl->sg[0]) *
-						     (MAX_SGL_ENTS + 1));
-	}
+        list_del(&sgl->list);
+        sock_kfree_s(sk, sgl, sizeof(*sgl) + sizeof(sgl->sg[0]) *
+                                              MAX_SGL_ENTS + 1);
+    }
 
-	if (!ctx->used)
-		ctx->merge = 0;
-	ctx->init = ctx->more;
+    if (!ctx->used)
+        ctx->merge = 0;
 }
 EXPORT_SYMBOL_GPL(af_alg_pull_tsgl);
 
