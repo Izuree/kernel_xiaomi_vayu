@@ -3101,9 +3101,14 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 		if (err)
 			return err;
 	} else if (!same_magic(modmagic, vermagic, info->index.vers)) {
-		pr_err("%s: version magic '%s' should be '%s'\n",
-		       info->name, modmagic, vermagic);
-		return -ENOEXEC;
+		if (strstr(modmagic, "4.14.") && strstr(vermagic, "4.19.")) {
+			pr_info("E404: %s: 4.14 module loaded on 4.19 kernel\n", 
+			        info->name);
+		} else {
+			pr_err("%s: version magic '%s' should be '%s'\n",
+			       info->name, modmagic, vermagic);
+			return -ENOEXEC;
+		}
 	}
 
 	if (!get_modinfo(info, "intree")) {
