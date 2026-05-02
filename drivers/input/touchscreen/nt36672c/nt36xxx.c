@@ -2924,7 +2924,11 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 	attrs_p = (struct attribute_group *)devm_kzalloc(&pdev->dev, sizeof(*attrs_p), GFP_KERNEL);
 	if (!attrs_p) {
 		NVT_ERR("no mem to alloc");
+#if NVT_TOUCH_MP
 		goto err_mp_proc_init_failed;
+#else
+		goto err_alloc_attrs_failed;
+#endif
 	}
 	ts->attrs = attrs_p;
 	attrs_p->name = "panel_info";
@@ -3022,6 +3026,7 @@ err_register_early_suspend_failed:
 err_create_nvt_ts_workqueue_failed:
 	if (ts->coord_workqueue)
 		destroy_workqueue(ts->coord_workqueue);
+err_alloc_attrs_failed:
 err_alloc_work_thread_failed:
 #if NVT_TOUCH_MP
 nvt_mp_proc_deinit();
@@ -3116,10 +3121,10 @@ static int32_t nvt_ts_remove(struct platform_device *pdev)
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
+#if NVT_TOUCH_MP
 #ifndef NVT_SAVE_TESTDATA_IN_FILE
 	nvt_test_data_proc_deinit();
 #endif
-#if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 #endif
 #if NVT_TOUCH_EXT_PROC
