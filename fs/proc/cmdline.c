@@ -6,13 +6,45 @@
 #ifdef CONFIG_INITRAMFS_IGNORE_SKIP_FLAG
 #include <asm/setup.h>
 #endif
-
+#include <linux/string.h>
 #ifdef CONFIG_INITRAMFS_IGNORE_SKIP_FLAG
 #define INITRAMFS_STR_FIND "skip_initramfs"
 #define INITRAMFS_STR_REPLACE "want_initramfs"
 #define INITRAMFS_STR_LEN (sizeof(INITRAMFS_STR_FIND) - 1)
 
 static char proc_command_line[COMMAND_LINE_SIZE];
+
+static int __init patch_bootloader_cmdline(void)
+{
+	char *p;
+
+	p = strstr(saved_command_line, "androidboot.flash.locked=0");
+	if (p)
+		p[strlen("androidboot.flash.locked=")] = '1';
+
+	p = strstr(saved_command_line, "androidboot.verifiedbootstate=orange");
+	if (p)
+		memcpy(p + strlen("androidboot.verifiedbootstate="), "green ", 6);
+
+	p = strstr(saved_command_line, "androidboot.verifiedbootstate=yellow");
+	if (p)
+		memcpy(p + strlen("androidboot.verifiedbootstate="), "green ", 6);
+
+#ifdef CONFIG_INITRAMFS_IGNORE_SKIP_FLAG
+	p = strstr(proc_command_line, "androidboot.flash.locked=0");
+	if (p)
+		p[strlen("androidboot.flash.locked=")] = '1';
+
+	p = strstr(proc_command_line, "androidboot.verifiedbootstate=orange");
+	if (p)
+		memcpy(p + strlen("androidboot.verifiedbootstate="), "green ", 6);
+
+	p = strstr(proc_command_line, "androidboot.verifiedbootstate=yellow");
+	if (p)
+		memcpy(p + strlen("androidboot.verifiedbootstate="), "green ", 6);
+#endif
+	return 0;
+}
 
 static void proc_command_line_init(void) {
 	char *offset_addr;
@@ -59,3 +91,4 @@ static int __init proc_cmdline_init(void)
 	return 0;
 }
 fs_initcall(proc_cmdline_init);
+late_initcall(patch_bootloader_cmdline);
