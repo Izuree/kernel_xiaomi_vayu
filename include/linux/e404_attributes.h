@@ -44,4 +44,13 @@ extern bool early_dtbo_130;
 extern int early_lyb_override;
 extern bool early_lyb_pressure;
 
+extern int lyb_override;
+extern int lyb_angle_callback;
+extern int lyb_touch_game_mode;
+extern int lyb_touch_active_mode;
+extern int lyb_touch_up_thresh;
+extern int lyb_touch_tolerance;
+extern int lyb_touch_edge;
+extern int lyb_touch_resist_rf;
+
 #endif /* _E404_ATTRIBUTES_H */

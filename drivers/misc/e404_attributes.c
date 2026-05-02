@@ -253,6 +253,45 @@ static void e404_parse_attributes(void) {
     e404_data.dtbo130 = early_dtbo_130;
 }
 
+#define LYB_ATTR_RW(name) \
+static ssize_t lyb_##name##_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
+    return sprintf(buf, "%d\n", lyb_##name); \
+} \
+static ssize_t lyb_##name##_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) { \
+    int ret, val; \
+    ret = kstrtoint(buf, 10, &val); \
+    if (ret) return ret; \
+    lyb_##name = val; \
+    return count; \
+} \
+static struct kobj_attribute lyb_##name##_attr = __ATTR(name, 0664, lyb_##name##_show, lyb_##name##_store);
+
+LYB_ATTR_RW(override);
+LYB_ATTR_RW(angle_callback);
+LYB_ATTR_RW(touch_game_mode);
+LYB_ATTR_RW(touch_active_mode);
+LYB_ATTR_RW(touch_up_thresh);
+LYB_ATTR_RW(touch_tolerance);
+LYB_ATTR_RW(touch_edge);
+LYB_ATTR_RW(touch_resist_rf);
+
+static struct attribute *lyb_attrs[] = {
+    &lyb_override_attr.attr,
+    &lyb_angle_callback_attr.attr,
+    &lyb_touch_game_mode_attr.attr,
+    &lyb_touch_active_mode_attr.attr,
+    &lyb_touch_up_thresh_attr.attr,
+    &lyb_touch_tolerance_attr.attr,
+    &lyb_touch_edge_attr.attr,
+    &lyb_touch_resist_rf_attr.attr,
+    NULL,
+};
+
+static struct attribute_group lyb_group = {
+    .name  = "lyb",
+    .attrs = lyb_attrs,
+};
+
 static int __init e404_init(void) {
     int ret;
     char tmp[E404_BLOCKLIST_STRLEN];
@@ -276,8 +315,15 @@ static int __init e404_init(void) {
     if (ret)
         goto fail_group;
 
+    ret = sysfs_create_group(e404_kobj, &lyb_group);
+    if (ret)
+        goto fail_prop_group;
+
     pr_alert("E404: Helper Init !\n");
     return 0;
+
+fail_prop_group:
+    sysfs_remove_group(e404_kobj, &e404_prop_group);
 
 fail_group:
     sysfs_remove_group(e404_kobj, &e404_group);
@@ -287,6 +333,7 @@ fail_kobj:
 }
 
 static void __exit e404_exit(void) {
+    sysfs_remove_group(e404_kobj, &lyb_group);
     sysfs_remove_group(e404_kobj, &e404_prop_group);
     sysfs_remove_group(e404_kobj, &e404_group);
     kobject_put(e404_kobj);

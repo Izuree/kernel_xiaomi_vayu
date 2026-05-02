@@ -224,28 +224,28 @@ static uint8_t bTouchIsAwake = 0;
 
 static bool lyb_pressure = false;
 
-static int lyb_override = 2;
+int lyb_override = 2;
 module_param(lyb_override, int, 0644);
 
-static int lyb_angle_callback = 3;
+int lyb_angle_callback = 3;
 module_param(lyb_angle_callback, int, 0644);
 
-static int lyb_touch_game_mode = 1;
+int lyb_touch_game_mode = 1;
 module_param(lyb_touch_game_mode, int, 0644);
 
-static int lyb_touch_active_mode = 1;
+int lyb_touch_active_mode = 1;
 module_param(lyb_touch_active_mode, int, 0644);
 
-static int lyb_touch_up_thresh = 1;
+int lyb_touch_up_thresh = 1;
 module_param(lyb_touch_up_thresh, int, 0644);
 
-static int lyb_touch_tolerance = 0;
+int lyb_touch_tolerance = 0;
 module_param(lyb_touch_tolerance, int, 0644);
 
-static int lyb_touch_edge = 0;
+int lyb_touch_edge = 0;
 module_param(lyb_touch_edge, int, 0644);
 
-static int lyb_touch_resist_rf = 1;
+int lyb_touch_resist_rf = 1;
 module_param(lyb_touch_resist_rf, int, 0644);
 
 static bool lyb_applied = false;
