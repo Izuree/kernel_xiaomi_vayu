@@ -2364,8 +2364,7 @@ static int simplify_symbols(struct module *mod, const struct load_info *info)
 			     ignore_undef_symbol(info->hdr->e_machine, name)))
 				break;
 
-			pr_warn("%s: Unknown symbol %s (err %li)\n",
-				mod->name, name, PTR_ERR(ksym));
+			
 			ret = PTR_ERR(ksym) ?: -ENOENT;
 			break;
 
