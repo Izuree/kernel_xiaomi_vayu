@@ -118,8 +118,9 @@ static void nvt_ts_late_resume(struct early_suspend *h);
 #endif
 static int32_t nvt_ts_suspend(struct device *dev);
 static int32_t nvt_ts_resume(struct device *dev);
-extern int dsi_panel_lockdown_info_read(unsigned char *plockdowninfo);
 extern void dsi_panel_doubleclick_enable(bool on);
+
+static inline int dsi_panel_lockdown_info_read(unsigned char *p) { return -ENODEV; }
 #ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
 static int32_t nvt_check_palm(uint8_t input_id, uint8_t *data);
 #endif
