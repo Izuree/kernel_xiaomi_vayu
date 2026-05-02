@@ -115,11 +115,70 @@ static const unsigned long osm_freq_min_eff[] = {
 
 static const unsigned long osm_freq_max_eff[] = {
 	[0] = ULONG_MAX,
-	[1] = 1785600000UL,
-	[2] = 2319200000UL,
-	[3] = 2496000000UL,  /* capped prime */
+	[1] = 1710600000UL,
+	[2] = 2249200000UL,
+	[3] = 2555000000UL,  /* capped prime */
 };
 
+#ifdef CONFIG_E404_ATTRIBUTES
+static const unsigned int e404_little_freqs_eff[] = {
+1113600, 1305600, 1382400, 1632000, 1708800,
+};
+static const unsigned int e404_big_freqs_eff[] = {
+300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
+1612800, 1708800, 1804800, 1920000, 2016000, 2131200, 2227200,
+};
+static const unsigned int e404_prime_freqs_eff[] = {
+300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
+1612800, 1708800, 1804800, 1920000, 2016000, 2227200,
+2323200, 2419200, 2534400,
+};
+static const unsigned int e404_little_freqs_def[] = {
+1113600, 1305600, 1382400, 1632000, 1708800, 1785600,
+};
+static const unsigned int e404_big_freqs_def[] = {
+300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
+1612800, 1708800, 1804800, 1920000, 2016000, 2131200, 2227200, 2419200,
+};
+static const unsigned int e404_prime_freqs_def[] = {
+300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600, 
+1612800, 1708800, 1804800, 1920000, 2016000, 2227200, 
+2323200, 2419200, 2534400, 2956800,
+};
+static bool e404_freq_is_valid(unsigned int cpu, unsigned int freq_khz)
+{
+const unsigned int *table;
+unsigned int size, i;
+if (e404_data.effcpu) {
+if (cpu <= 3) {
+            table = e404_little_freqs_eff;
+            size  = ARRAY_SIZE(e404_little_freqs_eff);
+} else if (cpu <= 6) {
+            table = e404_big_freqs_eff;
+            size  = ARRAY_SIZE(e404_big_freqs_eff);
+} else {
+            table = e404_prime_freqs_eff;
+            size  = ARRAY_SIZE(e404_prime_freqs_eff);
+}
+} else {
+if (cpu <= 3) {
+            table = e404_little_freqs_def;
+            size  = ARRAY_SIZE(e404_little_freqs_def);
+} else if (cpu <= 6) {
+            table = e404_big_freqs_def;
+            size  = ARRAY_SIZE(e404_big_freqs_def);
+} else {
+            table = e404_prime_freqs_def;
+            size  = ARRAY_SIZE(e404_prime_freqs_def);
+}
+}
+for (i = 0; i < size; i++)
+if (table[i] == freq_khz)
+return true;
+return false;
+}
+
+#endif
 /* pointers, selected at probe time */
 static const unsigned long *osm_freq_min;
 static const unsigned long *osm_freq_max;
@@ -706,9 +765,10 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
     else
         table[i].frequency = (XO_RATE * lval) / 1000;
     table[i].driver_data = table[i].frequency;
-
-    if (core_count == SINGLE_CORE_COUNT)
-        table[i].frequency = CPUFREQ_ENTRY_INVALID;
+		if (core_count == SINGLE_CORE_COUNT)
+			table[i].frequency = CPUFREQ_ENTRY_INVALID;
+		else if (!e404_freq_is_valid(policy->cpu, table[i].frequency))
+			table[i].frequency = CPUFREQ_ENTRY_INVALID;
 
     /* Two of the same frequencies means end of table */
     if (i > 0 && table[i-1].driver_data == table[i].driver_data) {
