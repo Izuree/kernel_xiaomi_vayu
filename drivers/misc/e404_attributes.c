@@ -25,6 +25,9 @@ int early_batt_profile = 1;
 bool early_ksu = 1;
 bool early_dtbo_130 = 0;
 
+int early_lyb_override = 2;
+bool early_lyb_pressure = false;
+
 
 struct e404_attributes e404_data = {
     .effcpu                     = 0,
@@ -86,7 +89,15 @@ static int __init parse_e404_args(char *str)
             early_dtbo_type = 1;
         else if (strcmp(arg, "dtbo_oem") == 0)
             early_dtbo_type = 2;
-        else
+        else if (strcmp(arg, "lyb0") == 0)
+            early_lyb_override = 0;
+        else if (strcmp(arg, "lyb1") == 0)
+            early_lyb_override = 1;
+        else if (strcmp(arg, "lyb2") == 0) {
+            early_lyb_override = 2;
+            early_lyb_pressure = true;
+        }
+        else 
             pr_alert("E404: Unknown flag: %s\n", arg);
     }
 

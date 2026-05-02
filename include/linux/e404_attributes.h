@@ -41,4 +41,7 @@ extern int early_dtbo_type;
 extern int early_batt_profile;
 extern bool early_dtbo_130;
 
+extern int early_lyb_override;
+extern bool early_lyb_pressure;
+
 #endif /* _E404_ATTRIBUTES_H */
