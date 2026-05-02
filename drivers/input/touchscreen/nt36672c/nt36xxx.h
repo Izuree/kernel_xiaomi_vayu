@@ -178,6 +178,8 @@ struct nvt_ts_data {
 	struct dentry *debugfs;
 #endif
 	struct workqueue_struct *event_wq;
+	struct workqueue_struct *coord_workqueue;
+	struct work_struct irq_work;
 	struct work_struct suspend_work;
 	struct work_struct resume_work;
 	int result_type;

@@ -2199,7 +2199,7 @@ static void get_lockdown_info(struct work_struct *work)
 	}
 }
 
-void lyb_apply_changes()
+void lyb_apply_changes(void)
 {
 	if (lyb_override >= 1)	{
 		// 1 == AOSP with touch profile, override panel orientation/edge rejection
@@ -2338,7 +2338,7 @@ static void nvt_ts_worker(struct work_struct *work)
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
 		mutex_unlock(&ts->lock);
-		return IRQ_HANDLED;
+		return;
 	}
 #endif
 
@@ -2514,7 +2514,7 @@ static void nvt_ts_worker_pressure(struct work_struct *work)
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
 		mutex_unlock(&ts->lock);
-		return IRQ_HANDLED;
+		return;
 	}
 #endif
 
@@ -2833,7 +2833,7 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 		NVT_LOG("int_trigger_type=%d\n", ts->int_trigger_type);
 		ts->irq_enabled = true;
 		ret = request_threaded_irq(ts->client->irq, NULL, nvt_ts_work_func,
-				ts->int_trigger_type | IRQF_ONESHOT | IRQF_PERF_AFFINE, NVT_SPI_NAME, ts);
+				ts->int_trigger_type | IRQF_ONESHOT, NVT_SPI_NAME, ts);
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
