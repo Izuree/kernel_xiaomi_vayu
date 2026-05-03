@@ -1012,8 +1012,9 @@ static void update_deadline(struct cfs_rq *cfs_rq, struct sched_entity *se)
 
 #include "pelt.h"
 #ifdef CONFIG_SMP
-
+#ifndef CONFIG_SCHED_CASS
 static int select_idle_sibling(struct task_struct *p, int prev_cpu, int cpu);
+#endif
 static unsigned long task_h_load(struct task_struct *p);
 static unsigned long capacity_of(int cpu);
 
@@ -5862,6 +5863,7 @@ static unsigned long cpu_avg_load_per_task(int cpu)
 	return 0;
 }
 
+#ifndef CONFIG_SCHED_CASS
 static void record_wakee(struct task_struct *p)
 {
 	/*
@@ -5878,6 +5880,7 @@ static void record_wakee(struct task_struct *p)
 		current->wakee_flips++;
 	}
 }
+#endif /* CONFIG_SCHED_CASS */
 
 /*
  * Returns the current capacity of cpu after applying both
@@ -6730,6 +6733,7 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
  * whatever is irrelevant, spread criteria is apparent partner count exceeds
  * socket size.
  */
+#ifndef CONFIG_SCHED_CASS
 static int wake_wide(struct task_struct *p, int sibling_count_hint)
 {
 	unsigned int master = current->wakee_flips;
@@ -6745,6 +6749,7 @@ static int wake_wide(struct task_struct *p, int sibling_count_hint)
 		return 0;
 	return 1;
 }
+#endif /* CONFIG_SCHED_CASS */
 
 /*
  * The purpose of wake_affine() is to quickly determine on which CPU we can run
@@ -6758,7 +6763,7 @@ static int wake_wide(struct task_struct *p, int sibling_count_hint)
  *			  scheduling latency of the CPUs. This seems to work
  *			  for the overloaded case.
  */
-
+#ifndef CONFIG_SCHED_CASS
 static bool
 wake_affine_idle(struct sched_domain *sd, struct task_struct *p,
 		 int this_cpu, int prev_cpu, int sync)
@@ -6805,7 +6810,8 @@ wake_affine_weight(struct sched_domain *sd, struct task_struct *p,
 
 	return this_eff_load <= prev_eff_load;
 }
-
+#endif
+#ifndef CONFIG_SCHED_CASS
 static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 		       int prev_cpu, int sync)
 {
@@ -6826,6 +6832,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 
 	return affine;
 }
+#endif /* CONFIG_SCHED_CASS */
 
 #ifdef CONFIG_SCHED_TUNE
 struct reciprocal_value schedtune_spc_rdiv;
@@ -7301,6 +7308,7 @@ static inline int select_idle_smt(struct task_struct *p, struct sched_domain *sd
  * comparing the average scan cost (tracked in sd->avg_scan_cost) against the
  * average idle time for this rq (as found in rq->avg_idle).
  */
+#ifndef CONFIG_SCHED_CASS
 static int select_idle_cpu(struct task_struct *p, struct sched_domain *sd, int target)
 {
 	struct cpumask *cpus = this_cpu_cpumask_var_ptr(select_idle_mask);
@@ -7352,7 +7360,8 @@ static int select_idle_cpu(struct task_struct *p, struct sched_domain *sd, int t
 
 	return cpu;
 }
-
+#endif
+#ifndef CONFIG_SCHED_CASS
 /*
  * Try and locate an idle core/thread in the LLC cache domain.
  */
@@ -7389,7 +7398,7 @@ static inline int __select_idle_sibling(struct task_struct *p, int prev, int tar
 
 	return target;
 }
-
+#endif
 static inline int select_idle_sibling_cstate_aware(struct task_struct *p, int prev, int target)
 {
 	struct sched_domain *sd;
@@ -7458,6 +7467,7 @@ static inline int select_idle_sibling_cstate_aware(struct task_struct *p, int pr
 	return target;
 }
 
+#ifndef CONFIG_SCHED_CASS
 static int select_idle_sibling(struct task_struct *p, int prev, int target)
 {
 	if (!sysctl_sched_cstate_aware)
@@ -7465,6 +7475,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 
 	return select_idle_sibling_cstate_aware(p, prev, target);
 }
+#endif /* CONFIG_SCHED_CASS */
 
 static inline bool task_fits_capacity(struct task_struct *p,
 					long capacity,
@@ -8063,6 +8074,7 @@ out:
  * In that case WAKE_AFFINE doesn't make sense and we'll let
  * BALANCE_WAKE sort things out.
  */
+#ifndef CONFIG_SCHED_CASS
 static int wake_cap(struct task_struct *p, int cpu, int prev_cpu)
 {
 	long min_cap, max_cap;
@@ -8082,6 +8094,7 @@ static int wake_cap(struct task_struct *p, int cpu, int prev_cpu)
 
 	return !task_fits_max(p, cpu);
 }
+#endif /* CONFIG_SCHED_CASS */
 
 bool __cpu_overutilized(int cpu, int delta)
 {
@@ -8285,6 +8298,7 @@ static inline bool is_many_wakeup(int sibling_count_hint)
  * sd is a pointer to the sched domain we wish to use for an
  * energy-aware placement option.
  */
+#ifndef CONFIG_SCHED_CASS
 static int find_energy_efficient_cpu(struct sched_domain *sd,
 				     struct task_struct *p,
 				     int cpu, int prev_cpu,
@@ -8444,6 +8458,7 @@ out:
 			boosted);
 	return target_cpu;
 }
+#endif /* CONFIG_SCHED_CASS */
 
 static inline bool nohz_kick_needed(struct rq *rq, bool only_update);
 static void nohz_balancer_kick(bool only_update);
