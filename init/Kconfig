@@ -73,6 +73,12 @@ config E404_ALIOTH_5K_BATT_DEFAULT
 	depends on E404_ATTRIBUTES
 	default n
 
+config ANDROID_16_BPF
+	bool "add support for android 16 bpf"
+	default n
+	select USERFAULTFD
+	select KALLSYMS
+
 endmenu
 
 menu "General setup"

@@ -92,7 +92,7 @@ esac
     declare -A DEVICE_MAP=(
         ["vayu"]="VAYU:vayu_defconfig"
         ["debug"]="DEBUG:vayu-debug_defconfig"
-
+        ["vaybpf"]="VAYBPF:vayu-bpf_defconfig"
     )
 
 for device in "${!DEVICE_MAP[@]}"; do
@@ -169,7 +169,8 @@ clearbuild() {
 zipbuild() {
     echo "-- Zipping Kernel --"
     cd "$AK3_DIR" || exit 1
-    ZIP_NAME="RE404-POCO_X3_PRO-$(date "+%y%m%d-%H%M").zip"
+    local BPF_SUFFIX=$([[ "$TARGET" == "VAYBPF" ]] && echo "-BPF" || echo "")
+    ZIP_NAME="RE404-POCO_X3_PRO-$(date "+%y%m%d-%H%M")${BPF_SUFFIX}.zip"
     zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ "${TARGET}"*-Image "${TARGET}"*-dtbo.img "${TARGET}"*-dtb anykernel.sh
     cd "$KERNEL_DIR" || exit 1
 }
