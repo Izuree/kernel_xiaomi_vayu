@@ -118,7 +118,9 @@ static inline bool is_userdebug(void)
 
 static inline bool is_unlocked(void)
 {
-	return false;
+	static const char unlocked[] = "orange";
+
+	return !strncmp(verifiedbootstate, unlocked, sizeof(unlocked));
 }
 
 static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
