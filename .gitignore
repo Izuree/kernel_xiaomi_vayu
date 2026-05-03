@@ -133,3 +133,5 @@ Android.bp
 #
 # Ignore out dir
 out
+# ignore build_all script
+build_all.sh
