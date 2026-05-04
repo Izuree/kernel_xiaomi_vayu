@@ -1145,7 +1145,7 @@ static int gsi_updatexfer_for_ep(struct usb_ep *ep,
 	struct dwc3_trb *trb;
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3_ep *dep = to_dwc3_ep(ep);
-	struct dwc3 *dwc = dep->dwc;
+	struct dwc3 * __maybe_unused dwc = dep->dwc;
 
 	for (i = 0; i < num_trbs - 1; i++) {
 		trb = &dep->trb_pool[i];

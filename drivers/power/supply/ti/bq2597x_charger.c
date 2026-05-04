@@ -1992,8 +1992,6 @@ static int bq2597x_charger_is_writeable(struct power_supply *psy,
 
 static int bq2597x_psy_register(struct bq2597x *bq)
 {
-	int ret;
-
 	bq->psy_cfg.drv_data = bq;
 	bq->psy_cfg.of_node = bq->dev->of_node;
 
@@ -2015,7 +2013,7 @@ static int bq2597x_psy_register(struct bq2597x *bq)
 	bq->fc2_psy = devm_power_supply_register(bq->dev,
 			&bq->psy_desc, &bq->psy_cfg);
 	if (IS_ERR(bq->fc2_psy)) {
-		bq_err("failed to register fc2_psy:%d\n", ret);
+		bq_err("failed to register fc2_psy\n");
 		return PTR_ERR(bq->fc2_psy);
 	}
 

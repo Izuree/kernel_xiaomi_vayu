@@ -891,7 +891,7 @@ static int setup_wait(struct ntsync_device *dev,
 	if (args->alert)
 		total_count++;
 
-	if (copy_from_user(fds, u64_to_user_ptr(args->objs), size))
+	if (copy_from_user(fds, u64_to_user_ptr((__u64)args->objs), size))
 		return -EFAULT;
 	if (args->alert)
 		fds[count] = args->alert;

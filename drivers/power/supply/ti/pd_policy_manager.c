@@ -954,7 +954,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	return PM_ALGO_RET_OK;
 }
 
-static const unsigned char *pm_str[] = {
+static const unsigned char * __maybe_unused pm_str[] = {
 	"PD_PM_STATE_ENTRY",
 	"PD_PM_STATE_FC2_ENTRY",
 	"PD_PM_STATE_FC2_ENTRY_1",

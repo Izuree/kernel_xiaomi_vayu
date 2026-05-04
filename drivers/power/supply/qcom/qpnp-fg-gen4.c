@@ -2451,7 +2451,7 @@ static int qpnp_fg_gen4_load_profile(struct fg_gen4_chip *chip)
 
 static bool is_sdam_cookie_set(struct fg_gen4_chip *chip)
 {
-	struct fg_dev *fg = &chip->fg;
+	struct fg_dev * __maybe_unused fg = &chip->fg;
 	int rc;
 	u8 cookie;
 
@@ -2468,7 +2468,7 @@ static bool is_sdam_cookie_set(struct fg_gen4_chip *chip)
 
 static void fg_gen4_clear_sdam(struct fg_gen4_chip *chip)
 {
-	struct fg_dev *fg = &chip->fg;
+	struct fg_dev * __maybe_unused fg = &chip->fg;
 	u8 buf[SDAM_FG_PARAM_LENGTH] = { 0 };
 	int rc;
 
@@ -3418,7 +3418,7 @@ static void fg_gen4_write_scale_msoc(struct fg_gen4_chip *chip)
 
 static void fg_gen4_exit_soc_scale(struct fg_gen4_chip *chip)
 {
-	struct fg_dev *fg = &chip->fg;
+	struct fg_dev * __maybe_unused fg = &chip->fg;
 
 	if (chip->soc_scale_mode) {
 		alarm_cancel(&chip->soc_scale_alarm_timer);
@@ -3708,7 +3708,7 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *data)
 
 static irqreturn_t fg_batt_temp_irq_handler(int irq, void *data)
 {
-	struct fg_dev *fg = data;
+	struct fg_dev * __maybe_unused fg = data;
 
 	fg_dbg(fg, FG_IRQ, "irq %d triggered\n", irq);
 	return IRQ_HANDLED;
@@ -3908,7 +3908,7 @@ static irqreturn_t fg_empty_soc_irq_handler(int irq, void *data)
 
 static irqreturn_t fg_soc_irq_handler(int irq, void *data)
 {
-	struct fg_dev *fg = data;
+	struct fg_dev * __maybe_unused fg = data;
 
 	fg_dbg(fg, FG_IRQ, "irq %d triggered\n", irq);
 	return IRQ_HANDLED;
@@ -5510,7 +5510,7 @@ static int fg_gen4_ttf_awake_voter(void *data, bool val)
 
 static int fg_wait_for_mem_attn(struct fg_gen4_chip *chip)
 {
-	struct fg_dev *fg = &chip->fg;
+	struct fg_dev * __maybe_unused fg = &chip->fg;
 	int rc, retries = 2;
 	ktime_t now;
 	s64 time_us;

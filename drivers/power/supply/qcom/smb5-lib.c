@@ -6517,7 +6517,7 @@ int smblib_set_prop_thermal_overheat(struct smb_charger *chg,
 irqreturn_t default_irq_handler(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
-	struct smb_charger *chg = irq_data->parent_data;
+	struct smb_charger * __maybe_unused chg = irq_data->parent_data;
 
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
 	return IRQ_HANDLED;
@@ -10085,7 +10085,7 @@ check_next:
 				msecs_to_jiffies(recheck_time));
 }
 
-static char *dr_mode_text[] = {
+static char * __maybe_unused dr_mode_text[] = {
 	"ufp", "dfp", "none"
 };
 

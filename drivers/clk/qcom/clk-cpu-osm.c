@@ -1063,6 +1063,7 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 						       GFP_KERNEL);
 	if (!osm_clks_init[c->cluster_num].rate_max)
 		return -ENOMEM;
+	{
 	int k = 0;
 	for (i = 0, k = 0; i < j; i++) {
 		unsigned long freq = c->osm_table[i].frequency;
@@ -1076,6 +1077,7 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 		k++;
 	}
 	c->num_entries = osm_clks_init[c->cluster_num].num_rate_max = k;
+	}
 	return 0;
 }
 
@@ -1209,6 +1211,15 @@ static void clk_cpu_osm_driver_sdmshrike_fixup(void)
 
 static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 {
+	int rc = 0, i;
+	u32 val;
+	int num_clks = ARRAY_SIZE(osm_qcom_clk_hws);
+	struct clk *clk;
+	struct clk_onecell_data *clk_data;
+	struct cpu_cycle_counter_cb cycle_counter_cb = {
+		.get_cpu_cycle_counter = clk_osm_get_cpu_cycle_counter,
+	};
+
 	/* select frequency table based on effcpu cmdline param */
 	if (e404_data.effcpu) {
 		osm_freq_min = osm_freq_min_eff;
@@ -1219,14 +1230,6 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		osm_freq_max = osm_freq_max_normal;
 		pr_info("e404: effcpu disabled, using full frequency table\n");
 	}
-	int rc = 0, i;
-	u32 val;
-	int num_clks = ARRAY_SIZE(osm_qcom_clk_hws);
-	struct clk *clk;
-	struct clk_onecell_data *clk_data;
-	struct cpu_cycle_counter_cb cycle_counter_cb = {
-		.get_cpu_cycle_counter = clk_osm_get_cpu_cycle_counter,
-	};
 
 	is_trinket = of_device_is_compatible(pdev->dev.of_node,
 				"qcom,clk-cpu-osm-trinket");
