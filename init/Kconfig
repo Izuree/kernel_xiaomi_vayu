@@ -79,6 +79,15 @@ config ANDROID_16_BPF
 	select USERFAULTFD
 	select KALLSYMS
 
+config E404_LD_DCE
+	bool "Enable dead code/data elimination (--gc-sections)"
+	default y
+	select LD_DEAD_CODE_DATA_ELIMINATION
+	help
+	  Compiles with -ffunction-sections -fdata-sections and links
+	  with --gc-sections to eliminate unused code and data at link time.
+	  Works alongside ThinLTO to remove dead symbols LTO may miss.
+
 endmenu
 
 menu "General setup"
