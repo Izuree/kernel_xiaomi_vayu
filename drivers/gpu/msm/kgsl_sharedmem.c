@@ -37,7 +37,6 @@
 
 static bool sharedmem_noretry_flag;
 
-static DEFINE_MUTEX(kernel_map_global_lock);
 
 struct cp2_mem_chunks {
 	unsigned int chunk_list;
@@ -468,7 +467,7 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
  */
 static void kgsl_page_alloc_unmap_kernel(struct kgsl_memdesc *memdesc)
 {
-	mutex_lock(&kernel_map_global_lock);
+	mutex_lock(&memdesc->map_lock);
 	if (!memdesc->hostptr) {
 		/* If already unmapped the refcount should be 0 */
 		WARN_ON(memdesc->hostptr_count);
@@ -482,7 +481,7 @@ static void kgsl_page_alloc_unmap_kernel(struct kgsl_memdesc *memdesc)
 	atomic_long_sub(memdesc->size, &kgsl_driver.stats.vmalloc);
 	memdesc->hostptr = NULL;
 done:
-	mutex_unlock(&kernel_map_global_lock);
+	mutex_unlock(&memdesc->map_lock);
 }
 
 int kgsl_lock_sgt(struct sg_table *sgt, uint64_t size)
@@ -583,7 +582,7 @@ static int kgsl_page_alloc_map_kernel(struct kgsl_memdesc *memdesc)
 	if (memdesc->size > ULONG_MAX)
 		return -ENOMEM;
 
-	mutex_lock(&kernel_map_global_lock);
+	mutex_lock(&memdesc->map_lock);
 	if ((!memdesc->hostptr) && (memdesc->pages != NULL)) {
 		pgprot_t page_prot = pgprot_writecombine(PAGE_KERNEL);
 
@@ -599,7 +598,7 @@ static int kgsl_page_alloc_map_kernel(struct kgsl_memdesc *memdesc)
 	if (memdesc->hostptr)
 		memdesc->hostptr_count++;
 
-	mutex_unlock(&kernel_map_global_lock);
+	mutex_unlock(&memdesc->map_lock);
 
 	return ret;
 }
@@ -849,6 +848,7 @@ void kgsl_memdesc_init(struct kgsl_device *device,
 		ilog2(PAGE_SIZE));
 	kgsl_memdesc_set_align(memdesc, align);
 	spin_lock_init(&memdesc->lock);
+	mutex_init(&memdesc->map_lock);
 }
 
 int
