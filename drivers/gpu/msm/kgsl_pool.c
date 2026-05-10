@@ -360,14 +360,6 @@ int kgsl_pool_alloc_page(int *page_size, struct page **pages,
 			} else
 				return -ENOMEM;
 		}
-
-#ifdef CONFIG_E404_ATTRIBUTES
-if (e404_data.kgsl_skip_zeroing == 0)
-	_kgsl_pool_zero_page(page, order);
-#else
-	_kgsl_pool_zero_page(page, order);
-#endif
-		
 		goto done;
 	}
 
@@ -387,13 +379,6 @@ if (e404_data.kgsl_skip_zeroing == 0)
 			page = alloc_pages(gfp_mask, order);
 			if (page == NULL)
 				return -ENOMEM;
-
-#ifdef CONFIG_E404_ATTRIBUTES
-if (e404_data.kgsl_skip_zeroing == 0)
-	_kgsl_pool_zero_page(page, order);
-#else
-	_kgsl_pool_zero_page(page, order);
-#endif
 
 			goto done;
 		}
