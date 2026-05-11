@@ -54,6 +54,11 @@
 #include "compat_qseecom.h"
 #include <linux/kthread.h>
 
+#ifdef pr_warn
+#undef pr_warn
+#define pr_warn pr_debug
+#endif
+
 #define QSEECOM_DEV			"qseecom"
 #define QSEOS_VERSION_14		0x14
 #define QSEEE_VERSION_00		0x400000
