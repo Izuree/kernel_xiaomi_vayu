@@ -888,7 +888,7 @@ void cp_statemachine(unsigned int port)
 			tune_vbus_count++;
 			pr_info("thermal or batt temp recovery...\n");
 			recovery = false;
-		} else {
+		} else if (thermal_level >= MAX_THERMAL_LEVEL || pm_state.slowly_charging || pm_state.is_temp_out_fc2_range) {
 			pr_info("thermal(%d) too high or batt temp out of range\n", thermal_level);
 		}
 		cp_get_batt_capacity();
