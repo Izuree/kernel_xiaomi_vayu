@@ -58,6 +58,8 @@ static DEFINE_SPINLOCK(suspend_lock);
 
 #define TAG "msm_adreno_tz: "
 
+#define DEFAULT_LOAD_THRESHOLD_PCT 60
+
 static u64 suspend_time;
 static u64 suspend_start;
 static unsigned long acc_total, acc_relative_busy;
@@ -137,6 +139,31 @@ static const struct device_attribute *adreno_tz_attr_list[] = {
 		&dev_attr_suspend_time,
 		NULL
 };
+
+/*
+ * shape_load - piecewise load curve.
+ * Below threshold: quadratic compression (busy^2 / threshold_abs).
+ * Above threshold: quadratic boost (busy + excess^2 / total).
+ * Continuous at the threshold point.
+ */
+static u64 shape_load(u64 busy, u64 total)
+{
+	u64 threshold_abs;
+
+	if (total == 0)
+		return busy;
+
+	threshold_abs = div64_u64(total * DEFAULT_LOAD_THRESHOLD_PCT, 100);
+
+	if (busy <= threshold_abs) {
+		return div64_u64(busy * busy, threshold_abs);
+	} else {
+		u64 excess = busy - threshold_abs;
+		u64 boosted = busy + div64_u64(excess * excess, total);
+
+		return min(boosted, total);
+	}
+}
 
 void compute_work_load(struct devfreq_dev_status *stats,
 		struct devfreq_msm_adreno_tz_data *priv,
@@ -389,7 +416,9 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
-		scm_data[2] = priv->bin.busy_time;
+		scm_data[2] = (unsigned int)shape_load(
+				(u64)priv->bin.busy_time,
+				(u64)priv->bin.total_time);
 		scm_data[3] = context_count;
 		__secure_tz_update_entry3(scm_data, sizeof(scm_data),
 					&val, sizeof(val), priv);
