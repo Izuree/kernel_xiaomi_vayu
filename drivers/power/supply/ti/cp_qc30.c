@@ -32,6 +32,11 @@
  */
 
 #define pr_fmt(fmt)	"[FC2-PM]: %s: " fmt, __func__
+
+#ifdef pr_info
+#undef pr_info
+#define pr_info pr_debug
+#endif
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
