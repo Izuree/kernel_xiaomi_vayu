@@ -94,88 +94,127 @@ static bool is_trinket;
 static bool is_atoll;
 static const unsigned long osm_freq_min_normal[] = {
 	[0] = 300000000UL,
-	[1] = 300000000UL,
-	[2] = 710400000UL,
-	[3] = 825600000UL,
+	[1] = 1171200000UL,
+	[2] = 825600000UL,
+	[3] = 844800000UL,
 };
 
 static const unsigned long osm_freq_max_normal[] = {
 	[0] = ULONG_MAX,
-	[1] = 1785600000UL,
+	[1] = 1804800000UL,
 	[2] = 2419200000UL,
-	[3] = 2956800000UL,  /* uncapped */
+	[3] = 2956800000UL,
 };
 
 static const unsigned long osm_freq_min_eff[] = {
-	[0] = 110000000UL,
-	[1] = 1100000000UL,
-	[2] = 710400000UL,
-	[3] = 825600000UL,
+	[0] = 300000000UL,
+	[1] = 1171200000UL,
+	[2] = 825600000UL,
+	[3] = 844800000UL,
 };
 
 static const unsigned long osm_freq_max_eff[] = {
 	[0] = ULONG_MAX,
 	[1] = 1710600000UL,
 	[2] = 2249200000UL,
-	[3] = 2555000000UL,  /* capped prime */
+	[3] = 2555000000UL,
 };
 
 #ifdef CONFIG_E404_ATTRIBUTES
 static const unsigned int e404_little_freqs_eff[] = {
-1113600, 1305600, 1382400, 1632000, 1708800,
+1171200, 1344000, 1420800, 1612800, 1708800,
 };
 static const unsigned int e404_big_freqs_eff[] = {
-300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
-1612800, 1708800, 1804800, 1920000, 2016000, 2131200, 2227200,
+825600, 940800, 1056000, 1171200, 1382400,
+1478400, 1574400, 1670400, 1766400, 1862400, 1958400, 
+2054400, 2150400, 2246400,
 };
 static const unsigned int e404_prime_freqs_eff[] = {
-300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
-1612800, 1708800, 1804800, 1920000, 2016000, 2227200,
-2323200, 2419200, 2534400,
+844800, 960000, 1075200, 1190400, 1401600,
+1516800, 1632000, 1747200, 1862400, 1977600, 2073600,
+2265600, 2361600, 2457600, 2553600,
 };
 static const unsigned int e404_little_freqs_def[] = {
-1113600, 1305600, 1382400, 1632000, 1708800, 1785600,
+1171200, 1248000, 1344000, 1420800, 1516800,
+1612800, 1708800, 1804800,
 };
 static const unsigned int e404_big_freqs_def[] = {
-300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600,
-1612800, 1708800, 1804800, 1920000, 2016000, 2131200, 2227200, 2419200,
+825600, 940800, 1056000, 1171200, 1382400,
+1478400, 1574400, 1670400, 1766400, 1862400, 1958400, 
+2054400, 2150400, 2246400, 2342400, 2419200,
 };
 static const unsigned int e404_prime_freqs_def[] = {
-300000, 825600, 940800, 1056000, 1171200, 1401600, 1497600, 
-1612800, 1708800, 1804800, 1920000, 2016000, 2227200, 
-2323200, 2419200, 2534400, 2956800,
+844800, 960000, 1075200, 1190400, 1305600, 1401600,
+1516800, 1632000, 1747200, 1862400, 1977600, 2073600,
+2169600, 2265600, 2361600, 2457600, 2553600, 2649600,
+2745600, 2841600, 2956800,
 };
+static const unsigned int *e404_get_freq_table(unsigned int cpu,
+						unsigned int *size)
+{
+	if (e404_data.effcpu) {
+		if (cpu <= 3) {
+			*size = ARRAY_SIZE(e404_little_freqs_eff);
+			return e404_little_freqs_eff;
+		} else if (cpu <= 6) {
+			*size = ARRAY_SIZE(e404_big_freqs_eff);
+			return e404_big_freqs_eff;
+		} else {
+			*size = ARRAY_SIZE(e404_prime_freqs_eff);
+			return e404_prime_freqs_eff;
+		}
+	} else {
+		if (cpu <= 3) {
+			*size = ARRAY_SIZE(e404_little_freqs_def);
+			return e404_little_freqs_def;
+		} else if (cpu <= 6) {
+			*size = ARRAY_SIZE(e404_big_freqs_def);
+			return e404_big_freqs_def;
+		} else {
+			*size = ARRAY_SIZE(e404_prime_freqs_def);
+			return e404_prime_freqs_def;
+		}
+	}
+}
+
+/*
+ * Snap freq_khz to the nearest entry in the e404 table.
+ * Returns the snapped frequency (always valid).
+ */
+static unsigned int e404_snap_freq(unsigned int cpu, unsigned int freq_khz)
+{
+	const unsigned int *table;
+	unsigned int size, i, best, best_diff, diff;
+
+	table = e404_get_freq_table(cpu, &size);
+	best = table[0];
+	best_diff = abs((int)freq_khz - (int)table[0]);
+
+	for (i = 1; i < size; i++) {
+		diff = abs((int)freq_khz - (int)table[i]);
+		if (diff < best_diff) {
+			best_diff = diff;
+			best = table[i];
+		}
+	}
+
+	if (best != freq_khz)
+		pr_debug("e404: cpu%u freq %u kHz not in table, snapped to %u kHz\n",
+			 cpu, freq_khz, best);
+
+	return best;
+}
+
 static bool e404_freq_is_valid(unsigned int cpu, unsigned int freq_khz)
 {
-const unsigned int *table;
-unsigned int size, i;
-if (e404_data.effcpu) {
-if (cpu <= 3) {
-            table = e404_little_freqs_eff;
-            size  = ARRAY_SIZE(e404_little_freqs_eff);
-} else if (cpu <= 6) {
-            table = e404_big_freqs_eff;
-            size  = ARRAY_SIZE(e404_big_freqs_eff);
-} else {
-            table = e404_prime_freqs_eff;
-            size  = ARRAY_SIZE(e404_prime_freqs_eff);
-}
-} else {
-if (cpu <= 3) {
-            table = e404_little_freqs_def;
-            size  = ARRAY_SIZE(e404_little_freqs_def);
-} else if (cpu <= 6) {
-            table = e404_big_freqs_def;
-            size  = ARRAY_SIZE(e404_big_freqs_def);
-} else {
-            table = e404_prime_freqs_def;
-            size  = ARRAY_SIZE(e404_prime_freqs_def);
-}
-}
-for (i = 0; i < size; i++)
-if (table[i] == freq_khz)
-return true;
-return false;
+	const unsigned int *table;
+	unsigned int size, i;
+
+	table = e404_get_freq_table(cpu, &size);
+	for (i = 0; i < size; i++)
+		if (table[i] == freq_khz)
+			return true;
+	return false;
 }
 
 #endif
@@ -765,10 +804,24 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
     else
         table[i].frequency = (XO_RATE * lval) / 1000;
     table[i].driver_data = table[i].frequency;
-		if (core_count == SINGLE_CORE_COUNT)
+		if (core_count == SINGLE_CORE_COUNT) {
 			table[i].frequency = CPUFREQ_ENTRY_INVALID;
-		else if (!e404_freq_is_valid(policy->cpu, table[i].frequency))
-			table[i].frequency = CPUFREQ_ENTRY_INVALID;
+		} else {
+			unsigned int snapped;
+			unsigned int j;
+
+			if (!e404_freq_is_valid(policy->cpu, table[i].frequency))
+				table[i].frequency = e404_snap_freq(policy->cpu,
+								     table[i].frequency);
+			snapped = table[i].frequency;
+			/* invalidate if this snapped freq already appeared */
+			for (j = 0; j < i; j++) {
+				if (table[j].frequency == snapped) {
+					table[i].frequency = CPUFREQ_ENTRY_INVALID;
+					break;
+				}
+			}
+		}
 
     /* Two of the same frequencies means end of table */
     if (i > 0 && table[i-1].driver_data == table[i].driver_data) {
@@ -1046,6 +1099,11 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 		c->osm_table[i].virtual_corner =
 					((data & GENMASK(21, 16)) >> 16);
 		c->osm_table[i].open_loop_volt = (data & GENMASK(11, 0));
+
+		if (c->osm_table[i].open_loop_volt > 100)
+			c->osm_table[i].open_loop_volt -= 100;
+		else
+			c->osm_table[i].open_loop_volt = 0;
 
 		pr_debug("index=%d freq=%ld virtual_corner=%d open_loop_voltage=%u\n",
 			 i, c->osm_table[i].frequency,

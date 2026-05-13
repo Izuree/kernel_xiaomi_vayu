@@ -501,3 +501,29 @@ static void parsing_done_workfn(struct work_struct *work)
 #else
 core_initcall(free_raw_capacity);
 #endif
+static const unsigned long cpu_cap_override[] = {
+	299, 299, 299, 299,
+	899, 899, 899,
+	1024,
+};
+
+static int __init override_cpu_capacity(void)
+{
+	unsigned long max_cap = 0;
+	int cpu;
+
+	for (cpu = 0; cpu < ARRAY_SIZE(cpu_cap_override); cpu++)
+		if (cpu_cap_override[cpu] > max_cap)
+			max_cap = cpu_cap_override[cpu];
+
+	for_each_possible_cpu(cpu) {
+		if (cpu >= ARRAY_SIZE(cpu_cap_override))
+			break;
+		topology_set_cpu_scale(cpu,
+			cpu_cap_override[cpu] * SCHED_CAPACITY_SCALE / max_cap);
+	}
+
+	pr_info("cpu_capacity: override applied\n");
+	return 0;
+}
+late_initcall(override_cpu_capacity);
