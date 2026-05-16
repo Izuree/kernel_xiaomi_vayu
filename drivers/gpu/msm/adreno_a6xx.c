@@ -523,7 +523,7 @@ static void a6xx_pwrup_reglist_init(struct adreno_device *adreno_dev)
 
 static void a6xx_init(struct adreno_device *adreno_dev)
 {
-	a6xx_crashdump_init(adreno_dev);
+	//a6xx_crashdump_init(adreno_dev);
 
 	/*
 	 * If the GMU is not enabled, rewrite the offset for the always on
@@ -1160,8 +1160,6 @@ static int a6xx_send_cp_init(struct adreno_device *adreno_dev,
 
 	ret = adreno_ringbuffer_submit_spin(rb, NULL, 2000);
 	if (ret) {
-		adreno_spin_idle_debug(adreno_dev,
-				"CP initialization failed to idle\n");
 
 		if (!adreno_is_a3xx(adreno_dev))
 			kgsl_sharedmem_writel(device, &device->scratch,
@@ -1231,9 +1229,6 @@ static int a6xx_post_start(struct adreno_device *adreno_dev)
 	rb->_wptr = rb->_wptr - (42 - (cmds - start));
 
 	ret = adreno_ringbuffer_submit_spin_nosync(rb, NULL, 2000);
-	if (ret)
-		adreno_spin_idle_debug(adreno_dev,
-			"hw preemption initialization failed to idle\n");
 
 	return ret;
 }
@@ -3276,7 +3271,6 @@ static int a6xx_secure_pt_restore(struct adreno_device *adreno_dev)
 struct adreno_gpudev adreno_a6xx_gpudev = {
 	.reg_offsets = &a6xx_reg_offsets,
 	.start = a6xx_start,
-	.snapshot = a6xx_snapshot,
 	.irq = &a6xx_irq,
 	.irq_trace = trace_kgsl_a5xx_irq_status,
 	.num_prio_levels = KGSL_PRIORITY_MAX_RB_LEVELS,
@@ -3309,9 +3303,7 @@ struct adreno_gpudev adreno_a6xx_gpudev = {
 	.sptprac_is_on = a6xx_sptprac_is_on,
 	.ccu_invalidate = a6xx_ccu_invalidate,
 	.perfcounter_update = a6xx_perfcounter_update,
-	.coresight = {&a6xx_coresight, &a6xx_coresight_cx},
 	.clk_set_options = a6xx_clk_set_options,
-	.snapshot_preemption = a6xx_snapshot_preemption,
 	.zap_shader_unload = a6xx_zap_shader_unload,
 	.secure_pt_hibernate = a6xx_secure_pt_hibernate,
 	.secure_pt_restore = a6xx_secure_pt_restore,

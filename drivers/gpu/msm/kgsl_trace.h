@@ -11,7 +11,7 @@
  *
  */
 
-#if !defined(_KGSL_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
+#if !defined(_KGSL_TRACE_H) || (defined(TRACE_HEADER_MULTI_READ) && defined(CONFIG_KGSL_TRACE))
 #define _KGSL_TRACE_H
 
 #undef TRACE_SYSTEM
@@ -28,6 +28,29 @@
 struct kgsl_device;
 struct kgsl_ringbuffer_issueibcmds;
 struct kgsl_device_waittimestamp;
+
+/* =====================================================================
+ * TRACE HIJACK MECHANISM
+ * If CONFIG_KGSL_TRACE is absent, transform all trace declarations
+ * below into harmless, zero-cost static inline stubs.
+ * =====================================================================
+ */
+#ifndef CONFIG_KGSL_TRACE
+
+#undef TRACE_EVENT
+#define TRACE_EVENT(name, proto, args, tstruct, assign, print) \
+    static inline void trace_##name(proto) { } \
+    static inline bool trace_##name##_enabled(void) { return false; }
+
+#undef DECLARE_EVENT_CLASS
+#define DECLARE_EVENT_CLASS(name, proto, args, tstruct, assign, print)
+
+#undef DEFINE_EVENT
+#define DEFINE_EVENT(template, name, proto, args) \
+    static inline void trace_##name(proto) { } \
+    static inline bool trace_##name##_enabled(void) { return false; }
+
+#endif /* !CONFIG_KGSL_TRACE */
 
 /*
  * Tracepoint for kgsl issue ib commands

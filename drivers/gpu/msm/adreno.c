@@ -186,30 +186,6 @@ void adreno_writereg64(struct adreno_device *adreno_dev,
 }
 
 /**
- * adreno_get_rptr() - Get the current ringbuffer read pointer
- * @rb: Pointer the ringbuffer to query
- *
- * Get the latest rptr
- */
-unsigned int adreno_get_rptr(struct adreno_ringbuffer *rb)
-{
-	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
-	unsigned int rptr = 0;
-
-	if (adreno_is_a3xx(adreno_dev))
-		adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR,
-				&rptr);
-	else {
-		struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
-
-		kgsl_sharedmem_readl(&device->scratch, &rptr,
-				SCRATCH_RPTR_OFFSET(rb->id));
-	}
-
-	return rptr;
-}
-
-/**
  * adreno_of_read_property() - Adreno read property
  * @node: Device node
  *
@@ -1443,7 +1419,6 @@ static int adreno_probe(struct platform_device *pdev)
 	if (status)
 		goto out;
 
-	adreno_debugfs_init(adreno_dev);
 	adreno_profile_init(adreno_dev);
 
 	adreno_dev->perfcounter = false;
@@ -1841,9 +1816,6 @@ static int adreno_switch_to_unsecure_mode(struct adreno_device *adreno_dev,
 	cmds += cp_secure_mode(adreno_dev, cmds, 0);
 
 	ret = adreno_ringbuffer_submit_spin(rb, NULL, 2000);
-	if (ret)
-		adreno_spin_idle_debug(adreno_dev,
-				"Switch to unsecure failed to idle\n");
 
 	return ret;
 }
@@ -1855,13 +1827,6 @@ int adreno_set_unsecured_mode(struct adreno_device *adreno_dev,
 
 	if (!adreno_is_a5xx(adreno_dev) && !adreno_is_a6xx(adreno_dev))
 		return -EINVAL;
-
-	if (ADRENO_QUIRK(adreno_dev, ADRENO_QUIRK_CRITICAL_PACKETS) &&
-			adreno_is_a5xx(adreno_dev)) {
-		ret = a5xx_critical_packet_submit(adreno_dev, rb);
-		if (ret)
-			return ret;
-	}
 
 	/* GPU comes up in secured mode, make it unsecured by default */
 	if (adreno_dev->zap_handle_ptr)
@@ -3219,34 +3184,6 @@ bool adreno_isidle(struct kgsl_device *device)
 	return adreno_hw_isidle(adreno_dev);
 }
 
-/* Print some key registers if a spin-for-idle times out */
-void adreno_spin_idle_debug(struct adreno_device *adreno_dev,
-		const char *str)
-{
-	struct kgsl_device *device = &adreno_dev->dev;
-	unsigned int rptr, wptr;
-	unsigned int status, status3, intstatus;
-	unsigned int hwfault;
-
-	dev_err(device->dev, str);
-
-	adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR, &rptr);
-	adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_WPTR, &wptr);
-
-	adreno_readreg(adreno_dev, ADRENO_REG_RBBM_STATUS, &status);
-	adreno_readreg(adreno_dev, ADRENO_REG_RBBM_STATUS3, &status3);
-	adreno_readreg(adreno_dev, ADRENO_REG_RBBM_INT_0_STATUS, &intstatus);
-	adreno_readreg(adreno_dev, ADRENO_REG_CP_HW_FAULT, &hwfault);
-
-	dev_err(device->dev,
-		"rb=%d pos=%X/%X rbbm_status=%8.8X/%8.8X int_0_status=%8.8X\n",
-		adreno_dev->cur_rb->id, rptr, wptr, status, status3, intstatus);
-
-	dev_err(device->dev, " hwfault=%8.8X\n", hwfault);
-
-	kgsl_device_snapshot(device, NULL, adreno_gmu_gpu_fault(adreno_dev));
-}
-
 /**
  * adreno_spin_idle() - Spin wait for the GPU to idle
  * @adreno_dev: Pointer to an adreno device
@@ -4212,7 +4149,6 @@ static const struct kgsl_functable adreno_functable = {
 	.compat_ioctl = adreno_compat_ioctl,
 	.power_stats = adreno_power_stats,
 	.gpuid = adreno_gpuid,
-	.snapshot = adreno_snapshot,
 	.irq_handler = adreno_irq_handler,
 	.drain = adreno_drain,
 	.device_private_create = adreno_device_private_create,

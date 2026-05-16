@@ -329,7 +329,7 @@ struct kgsl_device {
 	struct kgsl_pwrscale pwrscale;
 
 	int reset_counter; /* Track how many GPU core resets have occurred */
-	struct workqueue_struct *events_wq;
+	struct kthread_worker *events_worker;
 
 	struct device *busmondev; /* pseudo dev for GPU BW voting governor */
 
@@ -719,12 +719,22 @@ static inline int kgsl_change_flag(struct kgsl_device *device,
 	return ret;
 }
 
-int kgsl_readtimestamp(struct kgsl_device *device, void *priv,
-		enum kgsl_timestamp_type type, unsigned int *timestamp);
+static inline int kgsl_readtimestamp(struct kgsl_device *device, void *priv,
+		enum kgsl_timestamp_type type, unsigned int *timestamp)
+{
+	return device->ftbl->readtimestamp(device, priv, type, timestamp);
+}
 
-int kgsl_check_timestamp(struct kgsl_device *device,
-		struct kgsl_context *context, unsigned int timestamp);
+static inline int kgsl_check_timestamp(struct kgsl_device *device,
+	struct kgsl_context *context, unsigned int timestamp)
+{
+	unsigned int ts_processed;
 
+	kgsl_readtimestamp(device, context, KGSL_TIMESTAMP_RETIRED,
+		&ts_processed);
+
+	return (timestamp_cmp(ts_processed, timestamp) >= 0);
+}
 int kgsl_device_platform_probe(struct kgsl_device *device);
 
 void kgsl_device_platform_remove(struct kgsl_device *device);

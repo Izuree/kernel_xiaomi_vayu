@@ -1861,7 +1861,17 @@ void adreno_readreg64(struct adreno_device *adreno_dev,
 void adreno_writereg64(struct adreno_device *adreno_dev,
 		enum adreno_regs lo, enum adreno_regs hi, uint64_t val);
 
-unsigned int adreno_get_rptr(struct adreno_ringbuffer *rb);
+static inline unsigned int adreno_get_rptr(struct adreno_ringbuffer *rb)
+{
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	unsigned int rptr = 0;
+
+	kgsl_sharedmem_readl(&device->scratch, &rptr,
+			SCRATCH_RPTR_OFFSET(rb->id));
+
+	return rptr;
+}
 
 static inline bool adreno_rb_empty(struct adreno_ringbuffer *rb)
 {
