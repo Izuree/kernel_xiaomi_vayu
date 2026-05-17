@@ -1100,8 +1100,8 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 					((data & GENMASK(21, 16)) >> 16);
 		c->osm_table[i].open_loop_volt = (data & GENMASK(11, 0));
 
-		if (c->osm_table[i].open_loop_volt > 100)
-			c->osm_table[i].open_loop_volt -= 100;
+		if (c->osm_table[i].open_loop_volt > 400)
+			c->osm_table[i].open_loop_volt -= 400;
 		else
 			c->osm_table[i].open_loop_volt = 0;
 
