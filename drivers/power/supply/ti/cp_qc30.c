@@ -215,79 +215,14 @@ static int qc3_get_bms_fastcharge_mode(void)
 /* get thermal level from battery power supply property */
 static int qc3_get_batt_current_thermal_level(int *level)
 {
-	int ret, rc;
-	struct power_supply *psy;
-	union power_supply_propval val = {0,};
-
-	psy = cp_get_sw_psy();
-	if (!psy)
-		return 0;
-
-	ret = power_supply_get_property(psy,
-			POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &val);
-
-	if (rc < 0) {
-		pr_info("Couldn't get themal level:%d\n", rc);
-		return rc;
-	}
-
-	pr_err("val.intval: %d\n", val.intval);
-
-	*level = val.intval;
-	return rc;
+    *level = 0;
+    return 0;
 }
 
 /* determine whether to disable cp according to jeita status */
 static bool qc3_disable_cp_by_jeita_status(void)
 {
-	int batt_temp = 0, bq_input_suspend = 0;
-	int ret;
-	struct power_supply *psy;
-	union power_supply_propval val = {0,};
-
-	psy = cp_get_sw_psy();
-	if (!psy)
-		return false;
-
-	ret = power_supply_get_property(psy,
-			POWER_SUPPLY_PROP_BQ_INPUT_SUSPEND, &val);
-	if (!ret)
-		bq_input_suspend = !!val.intval;
-
-	psy = cp_get_bms_psy();
-	if (!psy)
-		return false;
-
-	ret = power_supply_get_property(psy,
-			POWER_SUPPLY_PROP_TEMP, &val);
-
-	if (ret < 0) {
-		pr_info("Couldn't get batt temp prop:%d\n", ret);
-		return false;
-	}
-
-	batt_temp = val.intval;
-	pr_err("batt_temp: %d\n", batt_temp);
-
-	if (bq_input_suspend) {
-		return true;
-	} else {
-		if (batt_temp >= JEITA_WARM_THR && !pm_state.jeita_triggered) {
-			pm_state.jeita_triggered = true;
-			return true;
-		} else if (batt_temp <= JEITA_COOL_NOT_ALLOW_CP_THR
-				&& !pm_state.jeita_triggered) {
-			pm_state.jeita_triggered = true;
-			return true;
-		} else if ((batt_temp <= (JEITA_WARM_THR - JEITA_HYSTERESIS))
-					&& (batt_temp >= (JEITA_COOL_NOT_ALLOW_CP_THR + JEITA_HYSTERESIS))
-				&& pm_state.jeita_triggered) {
-			pm_state.jeita_triggered = false;
-			return false;
-		} else {
-			return pm_state.jeita_triggered;
-		}
-	}
+    return false;
 }
 
 static int qc3_check_slowly_charging_enabled(void)
