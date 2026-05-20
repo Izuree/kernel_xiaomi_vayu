@@ -103,6 +103,11 @@ static inline char *VIDC_MSG_PRIO2STRING(int __level)
 	return __str;
 }
 
+#ifdef pr_info
+#undef pr_info
+#define pr_info pr_debug
+#endif
+
 #define dprintk(__level, __fmt, arg...)	\
 	do { \
 		if (msm_vidc_debug & __level) { \
