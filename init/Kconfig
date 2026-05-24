@@ -88,6 +88,22 @@ config E404_LD_DCE
 	  with --gc-sections to eliminate unused code and data at link time.
 	  Works alongside ThinLTO to remove dead symbols LTO may miss.
 
+config E404_DROIDSPACES
+	bool "add support for Droidspaces. a lightweight, portable Linux containerization."
+	depends on E404_ATTRIBUTES
+	select NAMESPACES
+	select PID_NS
+	select IPC_NS
+	select DEVTMPFS
+	select TMPFS_POSIX_ACL
+	select TMPFS_XATTR
+	select SYSVIPC
+	select POSIX_MQUEUE
+
+	default n
+	help
+		Enabling this config will enable all Kernel configurations for full DroidSpaces support.
+
 endmenu
 
 menu "General setup"
