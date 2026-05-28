@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-#if !defined(_SDE_TRACE_H_) || defined(TRACE_HEADER_MULTI_READ)
+#if !defined(_SDE_TRACE_H_) || (defined(TRACE_HEADER_MULTI_READ) && defined(CONFIG_SDE_TRACE))
 #define _SDE_TRACE_H_
 
 #include <linux/stringify.h>
@@ -21,6 +21,29 @@
 #define TRACE_SYSTEM sde
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE sde_trace
+
+/* =====================================================================
+ * TRACE HIJACK MECHANISM
+ * If CONFIG_SDE_TRACE is absent, transform all trace declarations
+ * below into harmless, zero-cost static inline stubs.
+ * =====================================================================
+ */
+#ifndef CONFIG_SDE_TRACE
+
+#undef TRACE_EVENT
+#define TRACE_EVENT(name, proto, args, tstruct, assign, print) \
+    static inline void trace_##name(proto) { } \
+    static inline bool trace_##name##_enabled(void) { return false; }
+
+#undef DECLARE_EVENT_CLASS
+#define DECLARE_EVENT_CLASS(name, proto, args, tstruct, assign, print)
+
+#undef DEFINE_EVENT
+#define DEFINE_EVENT(template, name, proto, args) \
+    static inline void trace_##name(proto) { } \
+    static inline bool trace_##name##_enabled(void) { return false; }
+
+#endif /* !CONFIG_SDE_TRACE */
 
 TRACE_EVENT(sde_perf_set_qos_luts,
 	TP_PROTO(u32 pnum, u32 fmt, bool rt, u32 fl,
