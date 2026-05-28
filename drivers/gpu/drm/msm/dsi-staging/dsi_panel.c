@@ -1764,10 +1764,6 @@ static int dsi_panel_parse_phy_props(struct dsi_panel *panel)
         props->panel_width_mm = e404_data.panel_width;
 		props->panel_height_mm = e404_data.panel_height;
 		pr_alert("E404: Overriding DTBO panel height & width for dtbo type 1");
-    } else if (e404_data.dtbo_type == 2) {
-		props->panel_width_mm = e404_data.panel_oem_width;
-		props->panel_height_mm = e404_data.panel_oem_height;
-		pr_alert("E404: Overriding DTBO panel height & width for dtbo type 2");
 	} else {
         rc = utils->read_u32(utils->data, "qcom,mdss-pan-physical-width-dimension", &val);
         props->panel_width_mm = val;
