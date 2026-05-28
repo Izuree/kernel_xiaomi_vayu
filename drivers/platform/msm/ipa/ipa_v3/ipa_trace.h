@@ -19,6 +19,13 @@
 
 #include <linux/tracepoint.h>
 
+#ifdef CONFIG_IPA_TRACE
+
+/* =====================================================================
+ * REAL TRACEPOINTS (Enabled via CONFIG_IPA_TRACE=y)
+ * =====================================================================
+ */
+
 TRACE_EVENT(
 	intr_to_poll3,
 
@@ -181,10 +188,47 @@ TRACE_EVENT(
 	TP_printk("napi_overall_poll_pkt_cnt=%d", __entry->poll_num)
 );
 
+#else 
+
+/* =====================================================================
+ * STUBBED TRACEPOINTS (Disabled - Compiles down to nothing)
+ * =====================================================================
+ */
+
+static inline void trace_intr_to_poll3(unsigned long client) {}
+static inline bool trace_intr_to_poll3_enabled(void) { return false; }
+
+static inline void trace_poll_to_intr3(unsigned long client) {}
+static inline bool trace_poll_to_intr3_enabled(void) { return false; }
+
+static inline void trace_idle_sleep_enter3(unsigned long client) {}
+static inline bool trace_idle_sleep_enter3_enabled(void) { return false; }
+
+static inline void trace_idle_sleep_exit3(unsigned long client) {}
+static inline bool trace_idle_sleep_exit3_enabled(void) { return false; }
+
+static inline void trace_rmnet_ipa_netifni3(unsigned long rx_pkt_cnt) {}
+static inline bool trace_rmnet_ipa_netifni3_enabled(void) { return false; }
+
+static inline void trace_rmnet_ipa_netifrx3(unsigned long rx_pkt_cnt) {}
+static inline bool trace_rmnet_ipa_netifrx3_enabled(void) { return false; }
+
+static inline void trace_rmnet_ipa_netif_rcv_skb3(unsigned long rx_pkt_cnt) {}
+static inline bool trace_rmnet_ipa_netif_rcv_skb3_enabled(void) { return false; }
+
+static inline void trace_ipa3_rx_poll_num(int poll_num) {}
+static inline bool trace_ipa3_rx_poll_num_enabled(void) { return false; }
+
+static inline void trace_ipa3_rx_poll_cnt(int poll_num) {}
+static inline bool trace_ipa3_rx_poll_cnt_enabled(void) { return false; }
+
+#endif /* CONFIG_IPA_TRACE */
 
 #endif /* _IPA_TRACE_H */
 
-/* This part must be outside protection */
+/* This part must be outside protection and ONLY evaluated when tracing is active */
+#ifdef CONFIG_IPA_TRACE
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH ../../drivers/platform/msm/ipa/ipa_v3
 #include <trace/define_trace.h>
+#endif
