@@ -87,11 +87,6 @@ struct clk_osm {
 	cpumask_t related_cpus;
 };
 
-static bool is_sdmshrike;
-static bool is_sm6150;
-static bool is_sdmmagpie;
-static bool is_trinket;
-static bool is_atoll;
 static const unsigned long osm_freq_min_normal[] = {
 	[0] = 300000000UL,
 	[1] = 1171200000UL,
@@ -500,30 +495,6 @@ static struct clk_osm cpu3_pwrcl_clk = {
 	},
 };
 
-static struct clk_osm cpu4_pwrcl_clk = {
-	.core_num = 4,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu4_pwrcl_clk",
-		.parent_names = (const char *[]){ "pwrcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_core,
-	},
-};
-
-static struct clk_osm cpu5_pwrcl_clk = {
-	.core_num = 5,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu5_pwrcl_clk",
-		.parent_names = (const char *[]){ "pwrcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_core,
-	},
-};
-
 static struct clk_osm perfcl_clk = {
 	.cluster_num = 2,
 	.osm_table_size = OSM_TABLE_SIZE,
@@ -560,18 +531,6 @@ static struct clk_osm cpu6_perfcl_clk = {
 	.prev_cycle_counter = 0,
 	.hw.init = &(struct clk_init_data){
 		.name = "cpu6_perfcl_clk",
-		.parent_names = (const char *[]){ "perfcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_core,
-	},
-};
-
-static struct clk_osm cpu7_perfcl_clk = {
-	.core_num = 3,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu7_perfcl_clk",
 		.parent_names = (const char *[]){ "perfcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_core,
@@ -651,10 +610,8 @@ static struct clk_osm *logical_cpu_to_clk(int cpu)
 		}
 
 		hwid = of_read_number(cell, of_n_addr_cells(cpu_node));
-		if (is_trinket)
-			hwid = get_logical_index(hwid);
-		else
-			hwid = (hwid >> 8) & 0xff;
+
+		hwid = (hwid >> 8) & 0xff;
 
 		of_node_put(cpu_node);
 		if (hwid >= ARRAY_SIZE(clk_cpu_map)) {
@@ -956,71 +913,12 @@ static int add_opp(struct clk_osm *c, struct device **device_list, int count)
 	return 0;
 }
 
-static int derive_device_list(struct device **device_list,
-				struct device_node *np,
-				char *phandle_name, int count)
-{
-	int i;
-	struct platform_device *pdev;
-	struct device_node *dev_node;
-
-	for (i = 0; i < count; i++) {
-		dev_node = of_parse_phandle(np, phandle_name, i);
-		if (!dev_node) {
-			pr_err("Unable to get device_node pointer for opp-handle (%s)\n",
-					phandle_name);
-			return -ENODEV;
-		}
-
-		pdev = of_find_device_by_node(dev_node);
-		if (!pdev) {
-			pr_err("Unable to find platform_device node for opp-handle (%s)\n",
-						phandle_name);
-			return -ENODEV;
-		}
-		device_list[i] = &pdev->dev;
-		of_node_put(dev_node);
-	}
-	return 0;
-}
-
-static void populate_l3_opp_table(struct device_node *np, char *phandle_name)
-{
-	struct device **device_list;
-	int len, count, ret = 0;
-
-	if (of_find_property(np, phandle_name, &len)) {
-		count = len / sizeof(u32);
-
-		device_list = kcalloc(count, sizeof(struct device *),
-							GFP_KERNEL);
-		if (!device_list)
-			return;
-
-		ret = derive_device_list(device_list, np, phandle_name, count);
-		if (ret < 0) {
-			pr_err("Failed to fill device_list for %s\n",
-							phandle_name);
-			return;
-		}
-	} else {
-		pr_debug("Unable to find %s\n", phandle_name);
-		return;
-	}
-
-	if (add_opp(&l3_clk, device_list, count))
-		pr_err("Failed to add OPP levels for %s\n", phandle_name);
-
-	kfree(device_list);
-}
-
 static void populate_opp_table(struct platform_device *pdev)
 {
 	int cpu;
 	struct device *cpu_dev;
 	struct clk_osm *c, *parent;
 	struct clk_hw *hw_parent;
-	struct device_node *np = pdev->dev.of_node;
 
 	for_each_possible_cpu(cpu) {
 		c = logical_cpu_to_clk(cpu);
@@ -1037,9 +935,6 @@ static void populate_opp_table(struct platform_device *pdev)
 				pr_err("Failed to add OPP levels for %s\n",
 					dev_name(cpu_dev));
 	}
-
-	if (!is_trinket)
-		populate_l3_opp_table(np, "l3-devs");
 }
 
 static u64 clk_osm_get_cpu_cycle_counter(int cpu)
@@ -1143,23 +1038,19 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 {
 	struct resource *res;
 
-	if (!is_trinket) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
-							"osm_l3_base");
-		if (!res) {
-			dev_err(&pdev->dev,
-				"Unable to get platform resource for osm_l3_base");
-			return -ENOMEM;
-		}
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "osm_l3_base");
+	if (!res) {
+		dev_err(&pdev->dev,
+			"Unable to get platform resource for osm_l3_base");
+		return -ENOMEM;
+	}
 
-		l3_clk.pbase = (unsigned long)res->start;
-		l3_clk.vbase = devm_ioremap(&pdev->dev, res->start,
-							resource_size(res));
+	l3_clk.pbase = (unsigned long)res->start;
+	l3_clk.vbase = devm_ioremap(&pdev->dev, res->start, resource_size(res));
 
-		if (!l3_clk.vbase) {
-			dev_err(&pdev->dev, "Unable to map osm_l3_base base\n");
-			return -ENOMEM;
-		}
+	if (!l3_clk.vbase) {
+		dev_err(&pdev->dev, "Unable to map osm_l3_base base\n");
+		return -ENOMEM;
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
@@ -1194,11 +1085,6 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to map osm_perfcl_base base\n");
 		return -ENOMEM;
 	}
-
-	if (is_sdmshrike || is_sm6150 || is_sdmmagpie ||
-		is_trinket || is_atoll)
-		return 0;
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"osm_perfpcl_base");
 	if (!res) {
@@ -1217,54 +1103,6 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 	}
 
 	return 0;
-}
-
-static void clk_cpu_osm_driver_sm6150_fixup(void)
-{
-	osm_qcom_clk_hws[CPU4_PERFCL_CLK] = NULL;
-	osm_qcom_clk_hws[CPU5_PERFCL_CLK] = NULL;
-	osm_qcom_clk_hws[CPU7_PERFPCL_CLK] = NULL;
-	osm_qcom_clk_hws[PERFPCL_CLK] = NULL;
-	osm_qcom_clk_hws[L3_CLUSTER2_VOTE_CLK] = NULL;
-	osm_qcom_clk_hws[CPU4_PWRCL_CLK] = &cpu4_pwrcl_clk.hw;
-	osm_qcom_clk_hws[CPU5_PWRCL_CLK] = &cpu5_pwrcl_clk.hw;
-	osm_qcom_clk_hws[CPU7_PERFCL_CLK] = &cpu7_perfcl_clk.hw;
-
-	cpu6_perfcl_clk.core_num = 0;
-	cpu7_perfcl_clk.core_num = 1;
-
-	clk_cpu_map[4] = &cpu4_pwrcl_clk;
-	clk_cpu_map[5] = &cpu5_pwrcl_clk;
-	clk_cpu_map[7] = &cpu7_perfcl_clk;
-}
-
-static void clk_cpu_osm_driver_trinket_fixup(void)
-{
-	pwrcl_clk.osm_table_size = OSM_TABLE_REDUCED_SIZE;
-	perfcl_clk.osm_table_size = OSM_TABLE_REDUCED_SIZE;
-
-	osm_qcom_clk_hws[L3_CLUSTER0_VOTE_CLK] = NULL,
-	osm_qcom_clk_hws[L3_CLUSTER1_VOTE_CLK] = NULL,
-	osm_qcom_clk_hws[L3_CLUSTER2_VOTE_CLK] = NULL,
-	osm_qcom_clk_hws[L3_MISC_VOTE_CLK] = NULL,
-	osm_qcom_clk_hws[L3_GPU_VOTE_CLK] = NULL,
-	osm_qcom_clk_hws[L3_CLK] = NULL,
-	osm_qcom_clk_hws[CPU7_PERFPCL_CLK] = NULL,
-	osm_qcom_clk_hws[PERFPCL_CLK] = NULL,
-	osm_qcom_clk_hws[CPU4_PWRCL_CLK] = NULL,
-	osm_qcom_clk_hws[CPU5_PWRCL_CLK] = NULL,
-	osm_qcom_clk_hws[CPU7_PERFCL_CLK] = &cpu7_perfcl_clk.hw;
-	clk_cpu_map[7] = &cpu7_perfcl_clk;
-}
-
-static void clk_cpu_osm_driver_sdmshrike_fixup(void)
-{
-	osm_qcom_clk_hws[CPU7_PERFPCL_CLK] = NULL;
-	osm_qcom_clk_hws[PERFPCL_CLK] = NULL;
-	osm_qcom_clk_hws[L3_CLUSTER2_VOTE_CLK] = NULL;
-	osm_qcom_clk_hws[CPU7_PERFCL_CLK] = &cpu7_perfcl_clk.hw;
-
-	clk_cpu_map[7] = &cpu7_perfcl_clk;
 }
 
 static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
@@ -1288,28 +1126,6 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		osm_freq_max = osm_freq_max_normal;
 		pr_info("e404: effcpu disabled, using full frequency table\n");
 	}
-
-	is_trinket = of_device_is_compatible(pdev->dev.of_node,
-				"qcom,clk-cpu-osm-trinket");
-
-	is_sdmmagpie = of_device_is_compatible(pdev->dev.of_node,
-				"qcom,clk-cpu-osm-sdmmagpie");
-
-	is_sm6150 = of_device_is_compatible(pdev->dev.of_node,
-				"qcom,clk-cpu-osm-sm6150");
-
-	is_sdmshrike = of_device_is_compatible(pdev->dev.of_node,
-				"qcom,clk-cpu-osm-sdmshrike");
-
-	is_atoll = of_device_is_compatible(pdev->dev.of_node,
-				"qcom,clk-cpu-osm-atoll");
-
-	if (is_sdmshrike)
-		clk_cpu_osm_driver_sdmshrike_fixup();
-	else if (is_sm6150 || is_sdmmagpie || is_atoll)
-		clk_cpu_osm_driver_sm6150_fixup();
-	else if (is_trinket)
-		clk_cpu_osm_driver_trinket_fixup();
 
 	clk_data = devm_kzalloc(&pdev->dev, sizeof(struct clk_onecell_data),
 								GFP_KERNEL);
@@ -1340,13 +1156,11 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 	if (val & BIT(0))
 		perfcl_clk.per_core_dcvs = true;
 
-	if (!is_trinket) {
-		rc = clk_osm_read_lut(pdev, &l3_clk);
-		if (rc) {
-			dev_err(&pdev->dev, "Unable to read OSM LUT for L3, rc=%d\n",
-				rc);
-			return rc;
-		}
+	rc = clk_osm_read_lut(pdev, &l3_clk);
+	if (rc) {
+		dev_err(&pdev->dev, "Unable to read OSM LUT for L3, rc=%d\n",
+			rc);
+		return rc;
 	}
 
 	rc = clk_osm_read_lut(pdev, &pwrcl_clk);
@@ -1363,22 +1177,17 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	if (!is_sdmshrike && !is_sm6150 && !is_sdmmagpie &&
-		!is_trinket && !is_atoll) {
-		rc = clk_osm_read_lut(pdev, &perfpcl_clk);
+	rc = clk_osm_read_lut(pdev, &perfpcl_clk);
 		if (rc) {
-			dev_err(&pdev->dev, "Unable to read OSM LUT for perf plus cluster, rc=%d\n",
-				rc);
-			return rc;
-		}
+		dev_err(&pdev->dev, "Unable to read OSM LUT for perf plus cluster, rc=%d\n",
+			rc);
+		return rc;
 	}
 
-	if (!is_trinket)
-		spin_lock_init(&l3_clk.lock);
+	spin_lock_init(&l3_clk.lock);
 	spin_lock_init(&pwrcl_clk.lock);
 	spin_lock_init(&perfcl_clk.lock);
-	if (!is_trinket)
-		spin_lock_init(&perfpcl_clk.lock);
+	spin_lock_init(&perfpcl_clk.lock);
 
 	/* Register OSM l3, pwr and perf clocks with Clock Framework */
 	for (i = 0; i < num_clks; i++) {
@@ -1403,18 +1212,16 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 
 	get_online_cpus();
 
-	if (!is_trinket) {
-		WARN(clk_prepare_enable(l3_cluster0_vote_clk.hw.clk),
-			"clk: Failed to enable cluster0 clock for L3\n");
-		WARN(clk_prepare_enable(l3_cluster1_vote_clk.hw.clk),
-			"clk: Failed to enable cluster1 clock for L3\n");
-		WARN(clk_prepare_enable(l3_cluster2_vote_clk.hw.clk),
-			"clk: Failed to enable cluster2 clock for L3\n");
-		WARN(clk_prepare_enable(l3_misc_vote_clk.hw.clk),
-			"clk: Failed to enable misc clock for L3\n");
-		WARN(clk_prepare_enable(l3_gpu_vote_clk.hw.clk),
-			"clk: Failed to enable gpu clock for L3\n");
-	}
+	WARN(clk_prepare_enable(l3_cluster0_vote_clk.hw.clk),
+		"clk: Failed to enable cluster0 clock for L3\n");
+	WARN(clk_prepare_enable(l3_cluster1_vote_clk.hw.clk),
+		"clk: Failed to enable cluster1 clock for L3\n");
+	WARN(clk_prepare_enable(l3_cluster2_vote_clk.hw.clk),
+		"clk: Failed to enable cluster2 clock for L3\n");
+	WARN(clk_prepare_enable(l3_misc_vote_clk.hw.clk),
+		"clk: Failed to enable misc clock for L3\n");
+	WARN(clk_prepare_enable(l3_gpu_vote_clk.hw.clk),
+		"clk: Failed to enable gpu clock for L3\n");
 
 	populate_opp_table(pdev);
 

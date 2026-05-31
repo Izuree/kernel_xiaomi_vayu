@@ -176,33 +176,12 @@ static int mdss_pll_clock_register(struct platform_device *pdev,
 	}
 
 	switch (pll_res->pll_interface_type) {
-	case MDSS_DSI_PLL_10NM:
-		rc = dsi_pll_clock_register_10nm(pdev, pll_res);
-		break;
-	case MDSS_DP_PLL_10NM:
-		rc = dp_pll_clock_register_10nm(pdev, pll_res);
-		break;
 	case MDSS_DSI_PLL_7NM:
 	case MDSS_DSI_PLL_7NM_V2:
 		rc = dsi_pll_clock_register_7nm(pdev, pll_res);
 		break;
 	case MDSS_DP_PLL_7NM:
 		rc = dp_pll_clock_register_7nm(pdev, pll_res);
-		break;
-	case MDSS_DSI_PLL_28LPM:
-		rc = dsi_pll_clock_register_28lpm(pdev, pll_res);
-		break;
-	case MDSS_DSI_PLL_14NM:
-		rc = dsi_pll_clock_register_14nm(pdev, pll_res);
-		break;
-	case MDSS_DP_PLL_14NM:
-		rc = dp_pll_clock_register_14nm(pdev, pll_res);
-		break;
-	case MDSS_HDMI_PLL_28LPM:
-		rc = hdmi_pll_clock_register_28lpm(pdev, pll_res);
-		break;
-	case MDSS_DSI_PLL_12NM:
-		rc = dsi_pll_clock_register_12nm(pdev, pll_res);
 		break;
 	case MDSS_UNKNOWN_PLL:
 	default:
