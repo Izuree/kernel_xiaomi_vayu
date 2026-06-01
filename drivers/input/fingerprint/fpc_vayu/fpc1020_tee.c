@@ -93,8 +93,6 @@ struct fpc1020_data {
 	int irqf;
 	struct notifier_block fb_notifier;
 	bool fb_black;
-	bool wait_finger_down;
-	struct work_struct work;
 	struct input_handler input_handler;
 };
 
@@ -570,12 +568,6 @@ static ssize_t fingerdown_wait_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
 	dev_dbg(fpc1020->dev, "%s\n", __func__);
-	if (!strncmp(buf, "enable", strlen("enable")) && fpc1020->prepared)
-		fpc1020->wait_finger_down = true;
-	else if (!strncmp(buf, "disable", strlen("disable")) && fpc1020->prepared)
-		fpc1020->wait_finger_down = false;
-	else
-		return -EINVAL;
 
 	return count;
 }
@@ -665,11 +657,8 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	}
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	if (fpc1020->wait_finger_down && fpc1020->fb_black && fpc1020->prepared) {
-		pr_debug("%s enter\n", __func__);
-		fpc1020->wait_finger_down = false;
-		schedule_work(&fpc1020->work);
-	}
+	if (fpc1020->fb_black && fpc1020->prepared)
+		__pm_wakeup_event(&fpc1020->screen_wl, FPC_TTW_HOLD_TIME);
 
 	return IRQ_HANDLED;
 }
@@ -832,7 +821,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 	}
 
 	fpc1020->fb_black = false;
-	fpc1020->wait_finger_down = false;
 	fpc1020->fb_notifier = fpc_notif_block;
 	msm_drm_register_client(&fpc1020->fb_notifier);
 
