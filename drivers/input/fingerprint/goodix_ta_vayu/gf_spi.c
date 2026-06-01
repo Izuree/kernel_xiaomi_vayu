@@ -25,6 +25,8 @@
 #include <linux/uaccess.h>
 #include <net/netlink.h>
 #include <net/sock.h>
+#include <linux/msm_drm_notify.h>
+#include <linux/pm_wakeup.h>
 
 static struct gf_dev {
 	dev_t devt;
@@ -34,6 +36,9 @@ static struct gf_dev {
 	struct regulator *vreg;
 	signed irq_gpio, rst_gpio;
 	int irq, irq_enabled;
+	bool fb_black;
+	struct notifier_block fb_notifier;
+	struct wakeup_source wl;
 } gf;
 
 #define MAX_MSGSIZE 2
@@ -85,7 +90,11 @@ static inline void irq_switch(struct gf_dev *gf_dev, int status) {
 }
 
 static inline irqreturn_t gf_irq(int irq, void *handle) {
-	return sendnlmsg();
+	struct gf_dev *gf_dev = handle;
+	if (gf_dev->fb_black)
+		__pm_wakeup_event(&gf_dev->wl, 1000);
+	sendnlmsg();
+	return IRQ_HANDLED;
 }
 
 static inline void gf_setup(struct gf_dev *gf_dev) {
@@ -98,7 +107,7 @@ static inline void gf_setup(struct gf_dev *gf_dev) {
 	gpio_request(gf_dev->irq_gpio, "gpio-irq");
 	gpio_direction_input(gf_dev->irq_gpio);
 	gf_dev->irq = gpio_to_irq(gf_dev->irq_gpio);
-	if (request_threaded_irq(gf_dev->irq, NULL, gf_irq,
+	if (!request_threaded_irq(gf_dev->irq, NULL, gf_irq,
 			IRQF_TRIGGER_RISING | IRQF_ONESHOT, "gf", gf_dev))
 		irq_switch(gf_dev, 1);
 	gf_dev->vreg = regulator_get(NULL, "pm8150_l17");
@@ -199,6 +208,30 @@ static LIST_HEAD(device_list);
 static int SPIDEV_MAJOR;
 #define GF_DEV_NAME "goodix_fp"
 #define GF_INPUT_NAME "uinput-goodix"
+static int gf_fb_notif_callback(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct gf_dev *gf_dev = container_of(nb, struct gf_dev, fb_notifier);
+	struct msm_drm_notifier *evdata = data;
+	int blank;
+
+	if (val != MSM_DRM_EVENT_BLANK || !evdata || !evdata->data)
+		return 0;
+
+	blank = *(int *)evdata->data;
+	switch (blank) {
+	case MSM_DRM_BLANK_POWERDOWN:
+		gf_dev->fb_black = true;
+		break;
+	case MSM_DRM_BLANK_UNBLANK:
+		gf_dev->fb_black = false;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static inline int gf_probe(struct platform_device *pdev) {
 	struct gf_dev *gf_dev = &gf;
 	unsigned long minor = find_first_zero_bit(minors, N_SPI_MINORS);
@@ -214,11 +247,19 @@ static inline int gf_probe(struct platform_device *pdev) {
 	mutex_unlock(&gf_lock);
 	gf_dev->input = input_allocate_device();
 	gf_dev->input->name = GF_INPUT_NAME;
-	return input_register_device(gf_dev->input);
+	if (input_register_device(gf_dev->input))
+		return -ENODEV;
+	wakeup_source_init(&gf_dev->wl, "gf_wl");
+	gf_dev->fb_black = false;
+	gf_dev->fb_notifier.notifier_call = gf_fb_notif_callback;
+	msm_drm_register_client(&gf_dev->fb_notifier);
+	return 0;
 }
 
 static inline int gf_remove(struct platform_device *pdev) {
 	struct gf_dev *gf_dev = &gf;
+	msm_drm_unregister_client(&gf_dev->fb_notifier);
+	wakeup_source_trash(&gf_dev->wl);
 	if (gf_dev->input) {
 		input_unregister_device(gf_dev->input);
 		input_free_device(gf_dev->input);
