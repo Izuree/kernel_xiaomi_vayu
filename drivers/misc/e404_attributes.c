@@ -3,9 +3,9 @@
 #include <linux/e404_attributes.h>
 
 #ifdef CONFIG_E404_EFFCPU_DEFAULT
-int early_effcpu = 1;
+bool early_effcpu = 1;
 #else
-int early_effcpu = 0;
+bool early_effcpu = 0;
 #endif
 #ifdef CONFIG_E404_MIUI
 int early_rom_type = 2;
@@ -16,11 +16,6 @@ int early_rom_type = 1;
 int early_dtbo_type = 2;
 #else
 int early_dtbo_type = 1;
-#endif
-#ifdef CONFIG_E404_ALIOTH_5K_BATT_DEFAULT
-int early_batt_profile = 2;
-#else
-int early_batt_profile = 1;
 #endif
 bool early_ksu = 1;
 bool early_dtbo_130 = 0;
@@ -33,17 +28,10 @@ struct e404_attributes e404_data = {
     .effcpu                     = 0,
     .rom_type                   = 1,
     .dtbo_type                  = 0,
-    .batt_profile               = 1,
     .kgsl_skip_zeroing          = 0,
     .file_sync                  = 1,
     .panel_width                = 70,
     .panel_height               = 155,
-    .panel_width_pipa           = 166,
-    .panel_height_pipa          = 266,
-    .panel_oem_width            = 700,
-    .panel_oem_height           = 1550,
-    .panel_oem_width_pipa       = 1662,
-    .panel_oem_height_pipa      = 2660,
     .bg_blocklist               = "com.shopee.id,com.lazada.android,com.tokopedia.tkpd",
     .effcpu                     = 1,
 };
@@ -77,10 +65,6 @@ static int __init parse_e404_args(char *str)
             early_dtbo_130 = 0;
         else if (strcmp(arg, "dtbo_130") == 0)
             early_dtbo_130 = 1;
-        else if (strcmp(arg, "batt_def") == 0)
-            early_batt_profile = 1;
-        else if (strcmp(arg, "batt_5k") == 0)
-            early_batt_profile = 2;
         else if (strcmp(arg, "ksu") == 0)
             early_ksu = 1;
         else if (strcmp(arg, "noksu") == 0)
@@ -197,17 +181,9 @@ static struct kobj_attribute name##_attr = __ATTR(name, 0664, name##_show, name#
 E404_ATTR_RO(effcpu);
 E404_ATTR_RO(rom_type);
 E404_ATTR_RO(dtbo_type);
-E404_ATTR_RO(batt_profile);
 E404_ATTR_RO(panel_width);
 E404_ATTR_RO(panel_height);
-E404_ATTR_RO(panel_width_pipa);
-E404_ATTR_RO(panel_height_pipa);
-E404_ATTR_RO(panel_oem_width);
-E404_ATTR_RO(panel_oem_height);
-E404_ATTR_RO(panel_oem_width_pipa);
-E404_ATTR_RO(panel_oem_height_pipa);
 E404_ATTR_RO(ksu);
-
 E404_ATTR_RW(kgsl_skip_zeroing);
 E404_ATTR_RW(file_sync);
 
@@ -226,15 +202,8 @@ static struct attribute *e404_prop_attrs[] = {
     &effcpu_attr.attr,
     &rom_type_attr.attr,
     &dtbo_type_attr.attr,
-    &batt_profile_attr.attr,
     &panel_width_attr.attr,
     &panel_height_attr.attr,
-    &panel_width_pipa_attr.attr,
-    &panel_height_pipa_attr.attr,
-    &panel_oem_width_attr.attr,
-    &panel_oem_height_attr.attr,
-    &panel_oem_width_pipa_attr.attr,
-    &panel_oem_height_pipa_attr.attr,
     &ksu_attr.attr,
     NULL,
 };
@@ -248,7 +217,6 @@ static void e404_parse_attributes(void) {
     e404_data.effcpu      = early_effcpu;
     e404_data.rom_type    = early_rom_type;
     e404_data.dtbo_type   = early_dtbo_type;
-    e404_data.batt_profile = early_batt_profile;
     e404_data.ksu = early_ksu;
     e404_data.dtbo130 = early_dtbo_130;
 }

@@ -14,20 +14,13 @@
 bool e404_comm_blocked(const char *comm);
 
 struct e404_attributes {
-    int effcpu;
+    bool effcpu;
     int rom_type;
     int dtbo_type;
-    int batt_profile;
-    int kgsl_skip_zeroing;
-    int file_sync;
+    bool kgsl_skip_zeroing;
+    bool file_sync;
     int panel_width;
     int panel_height;
-    int panel_width_pipa;
-    int panel_height_pipa;
-    int panel_oem_width;
-    int panel_oem_height;
-    int panel_oem_width_pipa;
-    int panel_oem_height_pipa;
     char bg_blocklist[E404_BLOCKLIST_STRLEN];
     bool ksu;
     bool dtbo130;
@@ -35,10 +28,9 @@ struct e404_attributes {
 
 extern struct e404_attributes e404_data;
 
-extern int early_effcpu;
+extern bool early_effcpu;
 extern int early_rom_type;
 extern int early_dtbo_type;
-extern int early_batt_profile;
 extern bool early_dtbo_130;
 
 extern int early_lyb_override;
