@@ -1138,7 +1138,7 @@ static void sii8620_set_infoframes(struct sii8620 *ctx)
 		return;
 	}
 
-	ret = hdmi_avi_infoframe_init(&frm.avi);
+	//ret = hdmi_avi_infoframe_init(&frm.avi);
 	frm.avi.colorspace = HDMI_COLORSPACE_YUV422;
 	frm.avi.active_aspect = HDMI_ACTIVE_ASPECT_PICTURE;
 	frm.avi.picture_aspect = HDMI_PICTURE_ASPECT_16_9;

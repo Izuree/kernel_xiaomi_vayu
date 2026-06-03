@@ -211,7 +211,7 @@ static void adv7511_set_config_csc(struct adv7511 *adv7511,
 	else
 		config.hdmi_mode = false;
 
-	hdmi_avi_infoframe_init(&config.avi_infoframe);
+	//hdmi_avi_infoframe_init(&config.avi_infoframe);
 
 	config.avi_infoframe.scan_mode = HDMI_SCAN_MODE_UNDERSCAN;
 

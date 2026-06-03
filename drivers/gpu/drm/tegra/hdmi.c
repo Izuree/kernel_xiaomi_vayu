@@ -828,7 +828,7 @@ static void tegra_hdmi_setup_stereo_infoframe(struct tegra_hdmi *hdmi)
 	u8 buffer[10];
 	ssize_t err;
 
-	hdmi_vendor_infoframe_init(&frame);
+	//hdmi_vendor_infoframe_init(&frame);
 	frame.s3d_struct = HDMI_3D_STRUCTURE_FRAME_PACKING;
 
 	err = hdmi_vendor_infoframe_pack(&frame, buffer, sizeof(buffer));

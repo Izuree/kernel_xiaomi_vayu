@@ -5033,7 +5033,7 @@ drm_hdmi_avi_infoframe_from_display_mode(struct hdmi_avi_infoframe *frame,
 	if (!frame || !mode)
 		return -EINVAL;
 
-	err = hdmi_avi_infoframe_init(frame);
+	//err = hdmi_avi_infoframe_init(frame);
 	if (err < 0)
 		return err;
 
@@ -5197,7 +5197,7 @@ drm_hdmi_vendor_infoframe_from_display_mode(struct hdmi_vendor_infoframe *frame,
 	if (vic && s3d_flags)
 		return -EINVAL;
 
-	err = hdmi_vendor_infoframe_init(frame);
+	//err = hdmi_vendor_infoframe_init(frame);
 	if (err < 0)
 		return err;
 
