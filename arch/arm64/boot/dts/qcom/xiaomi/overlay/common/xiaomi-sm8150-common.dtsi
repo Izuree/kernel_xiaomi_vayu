@@ -105,8 +105,8 @@
 	};
 
 	wdog: qcom,wdt@17c10000 {
-		qcom,bark-time = <60000>;
-		qcom,pet-time = <30000>;
+		qcom,bark-time = <20000>;
+		qcom,pet-time = <15000>;
 	};
 };
 
