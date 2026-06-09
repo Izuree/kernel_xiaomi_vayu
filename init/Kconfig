@@ -104,6 +104,32 @@ config E404_DROIDSPACES
 	help
 		Enabling this config will enable all Kernel configurations for full DroidSpaces support.
 
+config ROM_INLINE_MODE
+	bool "config to satisfy kernel check at rom building"
+	default n
+	select TRACE_GPU_MEM
+	select STACKPROTECTOR
+	select STACKPROTECTOR_STRONG
+	select SCHED_DEBUG
+	select PSI
+	select MODVERSIONS
+	select AUDIT
+
+config STACKPROTECTOR
+	depends on ROM_INLINE_MODE
+	bool "stub"
+	default y
+
+config STACKPROTECTOR_STRONG
+	depends on ROM_INLINE_MODE
+	bool "stub"
+	default y
+	
+config TRACE_GPU_MEM
+	depends on ROM_INLINE_MODE
+	bool "stub"
+	default y
+
 endmenu
 
 menu "General setup"
