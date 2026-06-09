@@ -1,2 +1,3 @@
 #!/bin/bash
-echo '#define UTS_RELEASE "4.19.404R"' > ../out/include/generated/utsrelease.h
+OBJTREE="${KBUILD_OUTPUT:-.}"
+echo '#define UTS_RELEASE "4.19.404R"' > "${OBJTREE}/include/generated/utsrelease.h"

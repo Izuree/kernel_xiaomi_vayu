@@ -1228,7 +1228,7 @@ vmlinux: scripts/link-vmlinux.sh vmlinux_prereq $(vmlinux-deps) postgen-hook FOR
 	+$(call if_changed,link-vmlinux)
 postgen-hook: include/generated/utsrelease.h
 	@echo "  E404	4.19 uname wrapper"
-	$(Q)$(srctree)/scripts/POST-GEN.sh
+	$(Q)KBUILD_OUTPUT=$(objtree) $(srctree)/scripts/POST-GEN.sh
 
 # Build samples along the rest of the kernel
 ifdef CONFIG_SAMPLES
