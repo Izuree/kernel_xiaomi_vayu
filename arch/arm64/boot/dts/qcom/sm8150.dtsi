@@ -316,7 +316,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x700>;
 			enable-method = "psci";
-			capacity-dmips-mhz = <1740>;
+			capacity-dmips-mhz = <2100>;
 			next-level-cache = <&L2_7>;
 			sched-energy-costs = <&CPU_COST_2 &CLUSTER_COST_2>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
