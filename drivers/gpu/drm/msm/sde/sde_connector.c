@@ -82,12 +82,17 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 
 	c_conn = bl_get_data(bd);
 	display = (struct dsi_display *) c_conn->display;
-	if (brightness > display->panel->bl_config.bl_max_level)
-		brightness = display->panel->bl_config.bl_max_level;
 
-	/* map UI brightness into driver backlight level with rounding */
-	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
-			display->panel->bl_config.brightness_max_level);
+	if (display->panel->hbm_mode != 0 && brightness != 0) {
+		bl_lvl = display->panel->bl_config.bl_max_level;
+	} else {
+		if (brightness > display->panel->bl_config.bl_max_level)
+			brightness = display->panel->bl_config.bl_max_level;
+
+		/* map UI brightness into driver backlight level with rounding */
+		bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
+				display->panel->bl_config.brightness_max_level);
+	}
 
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;
@@ -120,6 +125,116 @@ static const struct backlight_ops sde_backlight_device_ops = {
 	.get_brightness = sde_backlight_device_get_brightness,
 };
 
+static ssize_t _sde_connector_hbm_show(struct sde_connector *c_conn, char *buf)
+{
+	struct dsi_display *display;
+
+	if (!c_conn || !c_conn->display)
+		return -ENODEV;
+
+	display = (struct dsi_display *) c_conn->display;
+	if (!display->panel)
+		return -ENODEV;
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", display->panel->hbm_mode);
+}
+
+static ssize_t _sde_connector_hbm_store(struct sde_connector *c_conn,
+		const char *buf, size_t count)
+{
+	struct dsi_display *display;
+	int rc, hbm_mode;
+
+	if (!c_conn || !c_conn->display)
+		return -ENODEV;
+
+	display = (struct dsi_display *) c_conn->display;
+	if (!display->panel)
+		return -ENODEV;
+
+	rc = kstrtoint(buf, 10, &hbm_mode);
+	if (rc)
+		return rc;
+
+	mutex_lock(&display->display_lock);
+
+	/* L1 is non-functional on this panel's firmware; force L2 for any
+	 * non-zero request so on/off behaves as expected via mirrored node */
+	if (hbm_mode != 0)
+		hbm_mode = 2;
+
+	display->panel->hbm_mode = hbm_mode;
+	if (!dsi_panel_initialized(display->panel)) {
+		mutex_unlock(&display->display_lock);
+		return -EBUSY;
+	}
+
+	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_ON);
+	if (rc) {
+		mutex_unlock(&display->display_lock);
+		return rc;
+	}
+
+	rc = dsi_panel_apply_hbm_mode(display->panel);
+	if (rc)
+		SDE_ERROR("unable to set hbm mode, rc=%d\n", rc);
+
+	dsi_display_clk_ctrl(display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_OFF);
+
+	mutex_unlock(&display->display_lock);
+
+	if (c_conn->bl_device)
+		backlight_update_status(c_conn->bl_device);
+
+	return count;
+}
+
+static ssize_t sde_backlight_hbm_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct backlight_device *bd = to_backlight_device(dev);
+	struct sde_connector *c_conn = bl_get_data(bd);
+
+	return _sde_connector_hbm_show(c_conn, buf);
+}
+
+static ssize_t sde_backlight_hbm_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct backlight_device *bd = to_backlight_device(dev);
+	struct sde_connector *c_conn = bl_get_data(bd);
+
+	return _sde_connector_hbm_store(c_conn, buf, count);
+}
+
+static ssize_t sde_connector_hbm_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *connector = dev_get_drvdata(dev);
+	struct sde_connector *c_conn = to_sde_connector(connector);
+
+	return _sde_connector_hbm_show(c_conn, buf);
+}
+
+static ssize_t sde_connector_hbm_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct drm_connector *connector = dev_get_drvdata(dev);
+	struct sde_connector *c_conn = to_sde_connector(connector);
+
+	return _sde_connector_hbm_store(c_conn, buf, count);
+}
+
+static DEVICE_ATTR(hbm_mode, 0644,
+		sde_backlight_hbm_mode_show,
+		sde_backlight_hbm_mode_store);
+
+static DEVICE_ATTR(hbm, 0644,
+		sde_connector_hbm_show,
+		sde_connector_hbm_store);
+
 static int sde_backlight_setup(struct sde_connector *c_conn,
 					struct drm_device *dev)
 {
@@ -128,6 +243,7 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 	struct dsi_backlight_config *bl_config;
 	static int display_count;
 	char bl_node_name[BL_NODE_NAME_SIZE];
+	int rc;
 
 	if (!c_conn || !dev || !dev->dev) {
 		SDE_ERROR("invalid param\n");
@@ -155,6 +271,10 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 		return -ENODEV;
 	}
 	display_count++;
+
+	rc = device_create_file(&c_conn->bl_device->dev, &dev_attr_hbm_mode);
+	if (rc)
+		SDE_ERROR("failed to create hbm_mode sysfs node, rc=%d\n", rc);
 
 	return 0;
 }
@@ -779,8 +899,10 @@ void sde_connector_destroy(struct drm_connector *connector)
 	if (c_conn->blob_ext_hdr)
 		drm_property_blob_put(c_conn->blob_ext_hdr);
 
-	if (c_conn->bl_device)
+	if (c_conn->bl_device) {
+		device_remove_file(&c_conn->bl_device->dev, &dev_attr_hbm_mode);
 		backlight_device_unregister(c_conn->bl_device);
+	}
 	drm_connector_unregister(connector);
 	mutex_destroy(&c_conn->lock);
 	sde_fence_deinit(c_conn->retire_fence);
@@ -1665,12 +1787,21 @@ static int sde_connector_init_debugfs(struct drm_connector *connector)
 
 static int sde_connector_late_register(struct drm_connector *connector)
 {
+	int rc;
+
+	if (connector->kdev) {
+		rc = device_create_file(connector->kdev, &dev_attr_hbm);
+		if (rc)
+			SDE_ERROR("failed to create hbm sysfs node, rc=%d\n", rc);
+	}
+
 	return sde_connector_init_debugfs(connector);
 }
 
 static void sde_connector_early_unregister(struct drm_connector *connector)
 {
-	/* debugfs under connector->debugfs are deleted by drm_debugfs */
+	if (connector->kdev)
+		device_remove_file(connector->kdev, &dev_attr_hbm);
 }
 
 static int sde_connector_fill_modes(struct drm_connector *connector,
