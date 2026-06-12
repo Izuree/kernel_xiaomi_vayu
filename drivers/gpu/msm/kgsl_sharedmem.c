@@ -722,8 +722,8 @@ int kgsl_cache_range_op(struct kgsl_memdesc *memdesc, uint64_t offset,
 			return PTR_ERR(sgt);
 	}
 
-	size += offset & PAGE_MASK;
-	offset &= ~PAGE_MASK;
+	size = (size + (offset & (PAGE_SIZE - 1)) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+	offset &= ~(PAGE_SIZE - 1);
 
 	for_each_sg_page(sgt->sgl, &sg_iter, PAGE_ALIGN(size) >> PAGE_SHIFT,
 			offset >> PAGE_SHIFT)
