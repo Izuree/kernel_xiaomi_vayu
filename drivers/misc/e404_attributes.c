@@ -23,6 +23,14 @@ bool early_dtbo_130 = 0;
 int early_lyb_override = 2;
 bool early_lyb_pressure = false;
 
+extern unsigned long sysctl_sched_features;
+
+enum {
+#define SCHED_FEAT(name, enabled) __SCHED_FEAT_##name ,
+#include "../../kernel/sched/features.h"
+#undef SCHED_FEAT
+	__SCHED_FEAT_NR,
+};
 
 struct e404_attributes e404_data = {
     .effcpu                     = 0,
@@ -260,11 +268,56 @@ static struct attribute_group lyb_group = {
     .attrs = lyb_attrs,
 };
 
+#define EEVDF_FEAT_ATTR_RW(name, file) \
+static ssize_t eevdf_##file##_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
+    return sprintf(buf, "%d\n", !!(sysctl_sched_features & (1UL << __SCHED_FEAT_##name))); \
+} \
+static ssize_t eevdf_##file##_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) { \
+    int ret, val; \
+    ret = kstrtoint(buf, 10, &val); \
+    if (ret) return ret; \
+    if (val) \
+        sysctl_sched_features |= (1UL << __SCHED_FEAT_##name); \
+    else \
+        sysctl_sched_features &= ~(1UL << __SCHED_FEAT_##name); \
+    return count; \
+} \
+static struct kobj_attribute eevdf_##file##_attr = __ATTR(file, 0664, eevdf_##file##_show, eevdf_##file##_store);
+
+EEVDF_FEAT_ATTR_RW(PLACE_LAG, place_lag);
+EEVDF_FEAT_ATTR_RW(DELAY_DEQUEUE, delay_dequeue);
+EEVDF_FEAT_ATTR_RW(RUN_TO_PARITY, run_to_parity);
+EEVDF_FEAT_ATTR_RW(PREEMPT_SHORT, preempt_short);
+EEVDF_FEAT_ATTR_RW(PICK_BUDDY, pick_buddy);
+EEVDF_FEAT_ATTR_RW(HRTICK, hrtick);
+
+static struct attribute *eevdf_attrs[] = {
+    &eevdf_place_lag_attr.attr,
+    &eevdf_delay_dequeue_attr.attr,
+    &eevdf_run_to_parity_attr.attr,
+    &eevdf_preempt_short_attr.attr,
+    &eevdf_pick_buddy_attr.attr,
+    &eevdf_hrtick_attr.attr,
+    NULL,
+};
+
+static struct attribute_group eevdf_group = {
+    .name  = "eevdf",
+    .attrs = eevdf_attrs,
+};
+
 static int __init e404_init(void) {
     int ret;
     char tmp[E404_BLOCKLIST_STRLEN];
 
     e404_parse_attributes();
+
+    /* EEVDF init values */
+    sysctl_sched_features |= (0UL << __SCHED_FEAT_DELAY_DEQUEUE);
+    sysctl_sched_features |= (0UL << __SCHED_FEAT_HRTICK);
+    sysctl_sched_features |= (1UL << __SCHED_FEAT_PICK_BUDDY);
+    sysctl_sched_features |= (0UL << __SCHED_FEAT_PREEMPT_SHORT);
+    sysctl_sched_features |= (1UL << __SCHED_FEAT_RUN_TO_PARITY);
 
     if (e404_data.bg_blocklist[0]) {
         strscpy(tmp, e404_data.bg_blocklist, sizeof(tmp));
@@ -287,8 +340,15 @@ static int __init e404_init(void) {
     if (ret)
         goto fail_prop_group;
 
+    ret = sysfs_create_group(e404_kobj, &eevdf_group);
+    if (ret)
+        goto fail_lyb_group;
+
     pr_alert("E404: Helper Init !\n");
     return 0;
+
+fail_lyb_group:
+    sysfs_remove_group(e404_kobj, &lyb_group);
 
 fail_prop_group:
     sysfs_remove_group(e404_kobj, &e404_prop_group);
@@ -301,6 +361,7 @@ fail_kobj:
 }
 
 static void __exit e404_exit(void) {
+    sysfs_remove_group(e404_kobj, &eevdf_group);
     sysfs_remove_group(e404_kobj, &lyb_group);
     sysfs_remove_group(e404_kobj, &e404_prop_group);
     sysfs_remove_group(e404_kobj, &e404_group);
