@@ -58,7 +58,7 @@ static DEFINE_SPINLOCK(suspend_lock);
 
 #define TAG "msm_adreno_tz: "
 
-#define DEFAULT_LOAD_THRESHOLD_PCT 60
+#define DEFAULT_LOAD_THRESHOLD_PCT 45
 
 static u64 suspend_time;
 static u64 suspend_start;
@@ -141,28 +141,44 @@ static const struct device_attribute *adreno_tz_attr_list[] = {
 };
 
 /*
- * shape_load - piecewise load curve.
- * Below threshold: quadratic compression (busy^2 / threshold_abs).
- * Above threshold: quadratic boost (busy + excess^2 / total).
- * Continuous at the threshold point.
+ * shape_load - load curve with triangular headroom, mirroring the
+ * sugov dvfs_headroom design.
+ *
+ * Below threshold: linear pass-through (no suppression of moderate load).
+ * A triangular headroom term is added on top, peaking at busy == threshold
+ * and tapering linearly to zero at busy == 0 and busy == total. This gives
+ * the strongest boost to loads sitting right at/near the threshold band
+ * (typical UI compositing range), encouraging a quick burst-to-idle.
  */
 static u64 shape_load(u64 busy, u64 total)
 {
 	u64 threshold_abs;
+	u64 delta_t, headroom, side;
 
 	if (total == 0)
 		return busy;
 
 	threshold_abs = div64_u64(total * DEFAULT_LOAD_THRESHOLD_PCT, 100);
 
-	if (busy <= threshold_abs) {
-		return div64_u64(busy * busy, threshold_abs);
-	} else {
-		u64 excess = busy - threshold_abs;
-		u64 boosted = busy + div64_u64(excess * excess, total);
+	/* delta_t ~= total * 220 / 1024, matching sugov's headroom span */
+	delta_t = (total * 220) >> 10;
 
-		return min(boosted, total);
+	if (busy <= threshold_abs) {
+		/* rising edge: 0 at busy=0, delta_t at busy=threshold */
+		if (threshold_abs == 0)
+			headroom = 0;
+		else
+			headroom = div64_u64(delta_t * busy, threshold_abs);
+	} else {
+		/* falling edge: delta_t at busy=threshold, 0 at busy=total */
+		side = total - threshold_abs;
+		if (side == 0)
+			headroom = 0;
+		else
+			headroom = div64_u64(delta_t * (total - busy), side);
 	}
+
+	return min(busy + headroom, total);
 }
 
 void compute_work_load(struct devfreq_dev_status *stats,
