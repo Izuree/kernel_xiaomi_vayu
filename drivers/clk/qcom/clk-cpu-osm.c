@@ -913,12 +913,72 @@ static int add_opp(struct clk_osm *c, struct device **device_list, int count)
 	return 0;
 }
 
+static int derive_device_list(struct device **device_list,
+				struct device_node *np,
+				char *phandle_name, int count)
+{
+	int i;
+	struct platform_device *pdev;
+	struct device_node *dev_node;
+
+	for (i = 0; i < count; i++) {
+		dev_node = of_parse_phandle(np, phandle_name, i);
+		if (!dev_node) {
+			pr_err("Unable to get device_node pointer for opp-handle (%s)\n",
+					phandle_name);
+			return -ENODEV;
+		}
+
+		pdev = of_find_device_by_node(dev_node);
+		if (!pdev) {
+			pr_err("Unable to find platform_device node for opp-handle (%s)\n",
+						phandle_name);
+			return -ENODEV;
+		}
+		device_list[i] = &pdev->dev;
+		of_node_put(dev_node);
+	}
+	return 0;
+}
+
+static void populate_l3_opp_table(struct device_node *np, char *phandle_name)
+{
+	struct device **device_list;
+	int len, count, ret = 0;
+
+	if (of_find_property(np, phandle_name, &len)) {
+		count = len / sizeof(u32);
+
+		device_list = kcalloc(count, sizeof(struct device *),
+							GFP_KERNEL);
+		if (!device_list)
+			return;
+
+		ret = derive_device_list(device_list, np, phandle_name, count);
+		if (ret < 0) {
+			pr_err("Failed to fill device_list for %s\n",
+							phandle_name);
+			goto out;
+		}
+	} else {
+		pr_debug("Unable to find %s\n", phandle_name);
+		return;
+	}
+
+	if (add_opp(&l3_clk, device_list, count))
+		pr_err("Failed to add OPP levels for %s\n", phandle_name);
+
+out:
+	kfree(device_list);
+}
+
 static void populate_opp_table(struct platform_device *pdev)
 {
 	int cpu;
 	struct device *cpu_dev;
 	struct clk_osm *c, *parent;
 	struct clk_hw *hw_parent;
+	struct device_node *np = pdev->dev.of_node;
 
 	for_each_possible_cpu(cpu) {
 		c = logical_cpu_to_clk(cpu);
@@ -935,6 +995,8 @@ static void populate_opp_table(struct platform_device *pdev)
 				pr_err("Failed to add OPP levels for %s\n",
 					dev_name(cpu_dev));
 	}
+
+	populate_l3_opp_table(np, "l3-devs");
 }
 
 static u64 clk_osm_get_cpu_cycle_counter(int cpu)
