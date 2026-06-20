@@ -58,7 +58,7 @@ static DEFINE_SPINLOCK(suspend_lock);
 
 #define TAG "msm_adreno_tz: "
 
-#define DEFAULT_LOAD_THRESHOLD_PCT 45
+#define DEFAULT_LOAD_THRESHOLD_PCT 60
 
 static u64 suspend_time;
 static u64 suspend_start;
