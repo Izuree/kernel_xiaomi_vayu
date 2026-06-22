@@ -264,6 +264,17 @@ static void nvt_irq_enable(bool enable)
 	if (enable) {
 		if (!ts->irq_enabled) {
 			enable_irq(ts->client->irq);
+
+			struct cpumask eff_mask;
+			cpumask_clear(&eff_mask);
+			cpumask_set_cpu(0, &eff_mask);
+			cpumask_set_cpu(1, &eff_mask);
+			cpumask_set_cpu(2, &eff_mask);
+			cpumask_set_cpu(3, &eff_mask);
+
+			irq_set_affinity_hint(ts->client->irq, &eff_mask);
+			irq_set_affinity(ts->client->irq, &eff_mask);
+
 			ts->irq_enabled = true;
 		}
 	} else {
