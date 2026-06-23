@@ -34,6 +34,10 @@
 
 #include "nt36xxx_mem_map.h"
 
+#ifdef CONFIG_E404_ATTRIBUTES
+#include <linux/e404_attributes.h>
+#endif
+
 #define FW_HISTORY_SIZE	128
 /*Lock down info size*/
 #define NVT_LOCKDOWN_SIZE			8
@@ -85,10 +89,39 @@
 #define PACKET_PALM_OFF 4
 
 #define BOOT_UPDATE_FIRMWARE 1
-#define DEFAULT_BOOT_UPDATE_FIRMWARE_FIRST "j20s_novatek_ts_fw01.bin"
-#define DEFAULT_MP_UPDATE_FIRMWARE_FIRST   "j20s_novatek_ts_mp01.bin"
-#define DEFAULT_BOOT_UPDATE_FIRMWARE_SECOND "j20s_novatek_ts_fw02.bin"
-#define DEFAULT_MP_UPDATE_FIRMWARE_SECOND   "j20s_novatek_ts_mp02.bin"
+
+static char boot_fw01_name[64];
+static char boot_fw02_name[64];
+static char mp_fw01_name[64];
+static char mp_fw02_name[64];
+
+static int __init nt36xxx_early_init(void)
+{
+    if (lyb_override >= 1) {
+        strcpy(boot_fw01_name, "j20s_novatek_ts_fw01-lyb.bin");
+        strcpy(boot_fw02_name, "j20s_novatek_ts_fw02-lyb.bin");
+        strcpy(mp_fw01_name,  "j20s_novatek_ts_mp01-lyb.bin");
+        strcpy(mp_fw02_name,  "j20s_novatek_ts_mp02-lyb.bin");
+        pr_info("E404: Using LYB touch firmwares:\n");
+        pr_info("  FW01: %s\n", boot_fw01_name);
+        pr_info("  FW02: %s\n", boot_fw02_name);
+        pr_info("  MP01: %s\n", mp_fw01_name);
+        pr_info("  MP02: %s\n", mp_fw02_name);
+    } else {
+        strcpy(boot_fw01_name, "j20s_novatek_ts_fw01.bin");
+        strcpy(boot_fw02_name, "j20s_novatek_ts_fw02.bin");
+        strcpy(mp_fw01_name,  "j20s_novatek_ts_mp01.bin");
+        strcpy(mp_fw02_name,  "j20s_novatek_ts_mp02.bin");
+    }
+    return 0;
+}
+early_initcall(nt36xxx_early_init);
+
+#define DEFAULT_BOOT_UPDATE_FIRMWARE_FIRST  boot_fw01_name
+#define DEFAULT_BOOT_UPDATE_FIRMWARE_SECOND boot_fw02_name
+#define DEFAULT_MP_UPDATE_FIRMWARE_FIRST    mp_fw01_name
+#define DEFAULT_MP_UPDATE_FIRMWARE_SECOND   mp_fw02_name
+
 #define DEFAULT_DEBUG_FW_NAME "novatek_debug_fw.bin"
 #define DEFAULT_DEBUG_MP_NAME "novatek_debug_mp.bin"
 
