@@ -20,7 +20,7 @@ int early_dtbo_type = 1;
 bool early_ksu = 1;
 bool early_dtbo_130 = 0;
 
-int early_lyb_override = 2;
+int early_lyb_override = 0;
 bool early_lyb_pressure = false;
 
 
@@ -219,6 +219,7 @@ static void e404_parse_attributes(void) {
     e404_data.dtbo_type   = early_dtbo_type;
     e404_data.ksu = early_ksu;
     e404_data.dtbo130 = early_dtbo_130;
+    lyb_override = early_lyb_override;
 }
 
 #define LYB_ATTR_RW(name) \

@@ -115,7 +115,7 @@ static int __init nt36xxx_early_init(void)
     }
     return 0;
 }
-early_initcall(nt36xxx_early_init);
+postcore_initcall(nt36xxx_early_init);
 
 #define DEFAULT_BOOT_UPDATE_FIRMWARE_FIRST  boot_fw01_name
 #define DEFAULT_BOOT_UPDATE_FIRMWARE_SECOND boot_fw02_name
