@@ -2463,8 +2463,6 @@ static int wma_wake_event_packet(
 	case WOW_REASON_RECV_MAGIC_PATTERN:
 	case WOW_REASON_PACKET_FILTER_MATCH:
 		WMA_LOGD("Wake event packet:");
-		qdf_trace_hex_dump(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-				   packet, packet_len);
 
 		vdev = &wma->interfaces[wake_info->vdev_id];
 		wma_wow_parse_data_pkt(wma, wake_info->vdev_id,
@@ -2479,8 +2477,7 @@ static int wma_wake_event_packet(
 		 */
 		wma_debug("PAGE_FAULT occurs during suspend: packet_len %u",
 			  packet_len);
-		qdf_trace_hex_dump(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-				   packet, packet_len);
+
 		break;
 
 	default:
@@ -2562,8 +2559,6 @@ static int wma_wake_event_piggybacked(
 		pb_event_buf = event_param->wow_packet_buffer + 4;
 
 		WMA_LOGD("piggybacked event buffer:");
-		qdf_trace_hex_dump(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-				   pb_event_buf, pb_event_len);
 
 		tag = WMITLV_GET_TLVTAG(WMITLV_GET_HDR(pb_event_buf));
 		event_id = wow_get_wmi_eventid(wake_reason, tag);
@@ -4007,9 +4002,6 @@ QDF_STATUS wma_process_set_ie_info(tp_wma_handle wma,
 	WMA_LOGD(FL("vdev id: %d, ie_id: %d, band: %d, len: %d"),
 		 ie_info->vdev_id, ie_info->ie_id, ie_info->band,
 		 ie_info->length);
-
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-		ie_info->data, ie_info->length);
 
 	return wmi_unified_process_set_ie_info_cmd(wma->wmi_handle, &cmd);
 }
