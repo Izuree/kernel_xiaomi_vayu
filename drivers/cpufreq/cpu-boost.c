@@ -30,17 +30,14 @@ struct cpu_sync {
 	unsigned int input_boost_freq;
 };
 
+static unsigned int input_boost_ms = 20;
+static unsigned int fling_boost_ms = 20;
+
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
-
 static struct work_struct input_boost_work;
-
-static unsigned int input_boost_ms = 450;
-
 static unsigned int sched_boost_on_input;
-
 static bool sched_boost_active;
-
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 #define MIN_INPUT_INTERVAL (150 * USEC_PER_MSEC)
@@ -313,6 +310,19 @@ static struct input_handler cpuboost_input_handler = {
 	.id_table       = cpuboost_ids,
 };
 
+void kgsl_cmdbatch_retired_hook(void)
+{
+	unsigned int fps = dsi_panel_get_refresh_rate();
+
+	if (fps <= 60)
+		return;
+
+	if (work_pending(&input_boost_work))
+		return;
+
+	queue_work(cpu_boost_wq, &input_boost_work);
+}
+
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
@@ -324,18 +334,6 @@ static int cpu_boost_init(void)
 
 	INIT_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
-
-	for_each_possible_cpu(cpu) {
-		s = &per_cpu(sync_info, cpu);
-		s->cpu = cpu;
-		if (cpu <= 3)
-			s->input_boost_freq = 1708800;
-		else if (cpu <= 6)
-			s->input_boost_freq = 940800;
-		else
-			s->input_boost_freq = 0;
-	}
-	input_boost_ms = 450;
 
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 
