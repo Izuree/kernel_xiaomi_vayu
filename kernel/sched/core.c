@@ -1584,22 +1584,8 @@ void deactivate_task(struct rq *rq, struct task_struct *p, int flags)
 	dequeue_task(rq, p, flags);
 }
 
-void __block_task(struct rq *rq, struct task_struct *p)
-{
-	WRITE_ONCE(p->on_rq, 0);
-	if (p->in_iowait) {
-		atomic_inc(&rq->nr_iowait);
-		delayacct_blkio_start();
-	}
-	if (task_contributes_to_load(p))
-		rq->nr_uninterruptible++;
-}
-
 static void block_task(struct rq *rq, struct task_struct *p, int flags)
 {
-	if (flags & DEQUEUE_SLEEP)
-		clear_ed_task(p, rq);
-
 	if (dequeue_task(rq, p, DEQUEUE_SLEEP | flags))
 		__block_task(rq, p);
 }
@@ -3977,7 +3963,7 @@ void scheduler_tick(void)
 	rq->idle_balance = idle_cpu(cpu);
 	trigger_load_balance(rq);
 #endif
-	rq_last_tick_reset(rq);
+
 #ifdef CONFIG_SCHED_WALT
 	rcu_read_lock();
 	grp = task_related_thread_group(curr);
