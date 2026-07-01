@@ -83,6 +83,7 @@
 
 #if NVT_TOUCH_ESD_PROTECT
 static struct delayed_work nvt_esd_check_work;
+static struct work_struct nvt_wdt_recovery_work;
 static struct workqueue_struct *nvt_esd_check_wq;
 static unsigned long irq_timer = 0;
 uint8_t esd_check = false;
@@ -1396,6 +1397,22 @@ static void nvt_esd_check_func(struct work_struct *work)
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 #if NVT_TOUCH_WDT_RECOVERY
+
+static void nvt_wdt_recovery_work_func(struct work_struct *work)
+{
+	NVT_LOG("WDT recovery: reflashing firmware\n");
+	mutex_lock(&ts->lock);
+	if (nvt_get_dbgfw_status()) {
+		if (nvt_update_firmware(DEFAULT_DEBUG_FW_NAME) < 0) {
+			NVT_ERR("use built-in fw\n");
+			nvt_update_firmware(ts->fw_name);
+		}
+	} else {
+		nvt_update_firmware(ts->fw_name);
+	}
+	mutex_unlock(&ts->lock);
+}
+
 static uint8_t recovery_cnt = 0;
 static uint8_t nvt_wdt_fw_recovery(uint8_t *point_data)
 {
@@ -2317,14 +2334,11 @@ static void nvt_ts_worker(struct work_struct *work)
 			NVT_ERR("Dump FW history:\n");
 			nvt_dump_fw_history();
 		}
-		if (nvt_get_dbgfw_status()) {
-			if (nvt_update_firmware(DEFAULT_DEBUG_FW_NAME) < 0) {
-				NVT_ERR("use built-in fw");
-				nvt_update_firmware(ts->fw_name);
-			}
-		} else {
-			nvt_update_firmware(ts->fw_name);
-		}
+		/* Offload firmware reflash to workqueue - calling
+		 * nvt_update_firmware() from IRQ/worker context blocks
+		 * on SPI and deadlocks the input subsystem after long idle
+		 * when touch IC WDT resets the firmware. */
+		schedule_work(&nvt_wdt_recovery_work);
 		goto XFER_ERROR;
    }
 #endif /* #if NVT_TOUCH_WDT_RECOVERY */
@@ -2493,14 +2507,11 @@ static void nvt_ts_worker_pressure(struct work_struct *work)
 			NVT_ERR("Dump FW history:\n");
 			nvt_dump_fw_history();
 		}
-		if (nvt_get_dbgfw_status()) {
-			if (nvt_update_firmware(DEFAULT_DEBUG_FW_NAME) < 0) {
-				NVT_ERR("use built-in fw");
-				nvt_update_firmware(ts->fw_name);
-			}
-		} else {
-			nvt_update_firmware(ts->fw_name);
-		}
+		/* Offload firmware reflash to workqueue - calling
+		 * nvt_update_firmware() from IRQ/worker context blocks
+		 * on SPI and deadlocks the input subsystem after long idle
+		 * when touch IC WDT resets the firmware. */
+		schedule_work(&nvt_wdt_recovery_work);
 		goto XFER_ERROR;
    }
 #endif /* #if NVT_TOUCH_WDT_RECOVERY */
@@ -2883,6 +2894,7 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 		goto err_create_nvt_fwu_wq_failed;
 	}
 	INIT_DELAYED_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
+	INIT_WORK(&nvt_wdt_recovery_work, nvt_wdt_recovery_work_func);
 	/* please make sure boot update start after display reset(RESX) sequence */
 	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(10000));
 #endif
