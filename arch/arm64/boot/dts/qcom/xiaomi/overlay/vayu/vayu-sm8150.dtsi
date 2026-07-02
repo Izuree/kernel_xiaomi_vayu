@@ -417,7 +417,6 @@ And public attribution of xiaomi platforms(like J20S and so and)
 		startup-delay-us = <4000>;
 		enable-active-high;
 		regulator-boot-on;
-		regulator-always-on;
 		gpio = <&tlmm 100 0>;
 	 };
 
@@ -436,7 +435,6 @@ And public attribution of xiaomi platforms(like J20S and so and)
 		start-delay-us = <4000>;
 		enable-active-high;
 		regulator-boot-on;
-		regulator-always-on;
 		gpio = <&tlmm 21 0>;
 	};
 
