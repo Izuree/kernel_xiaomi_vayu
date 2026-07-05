@@ -40,6 +40,7 @@
 #include "clk-debug.h"
 
 #include <linux/e404_attributes.h>
+#include <linux/energy_model.h>
 
 #define OSM_INIT_RATE			300000000UL
 #define XO_RATE				19200000UL
@@ -737,6 +738,165 @@ static unsigned int osm_cpufreq_get(unsigned int cpu)
 	return policy->freq_table[index].frequency;
 }
 
+#ifdef CONFIG_ENERGY_MODEL
+
+struct em_freq_power {
+	unsigned int freq_khz;
+	unsigned long power_mw;
+};
+
+/* Per-core power in mW from freqbench sm8150ac results */
+
+static const struct em_freq_power em_silver_def[] = {
+	{ 1171200,  126 },
+	{ 1248000,  138 },
+	{ 1344000,  150 },
+	{ 1420800,  149 },
+	{ 1516800,  154 },
+	{ 1612800,  166 },
+	{ 1708800,  178 },
+	{ 1804800,  187 },
+};
+
+static const struct em_freq_power em_silver_eff[] = {
+	{ 1171200,  126 },
+	{ 1344000,  150 },
+	{ 1420800,  149 },
+	{ 1612800,  166 },
+	{ 1708800,  178 },
+};
+
+static const struct em_freq_power em_gold_def[] = {
+	{  825600,  192 },
+	{  940800,  218 },
+	{ 1056000,  245 },
+	{ 1171200,  278 },
+	{ 1382400,  330 },
+	{ 1478400,  380 },
+	{ 1574400,  393 },
+	{ 1670400,  424 },
+	{ 1766400,  477 },
+	{ 1862400,  527 },
+	{ 1958400,  574 },
+	{ 2054400,  640 },
+	{ 2150400,  729 },
+	{ 2246400,  815 },
+	{ 2419200,  966 },
+};
+
+static const struct em_freq_power em_gold_eff[] = {
+	{  825600,  192 },
+	{  940800,  218 },
+	{ 1056000,  245 },
+	{ 1171200,  278 },
+	{ 1382400,  330 },
+	{ 1478400,  380 },
+	{ 1574400,  393 },
+	{ 1670400,  424 },
+	{ 1766400,  477 },
+	{ 1862400,  527 },
+	{ 1958400,  574 },
+	{ 2054400,  640 },
+	{ 2150400,  729 },
+	{ 2246400,  815 },
+};
+
+static const struct em_freq_power em_prime_def[] = {
+	{  844800,  171 },
+	{  960000,  245 },
+	{ 1075200,  269 },
+	{ 1190400,  292 },
+	{ 1305600,  322 },
+	{ 1401600,  351 },
+	{ 1516800,  389 },
+	{ 1632000,  431 },
+	{ 1747200,  464 },
+	{ 1862400,  490 },
+	{ 1977600,  544 },
+	{ 2073600,  576 },
+	{ 2169600,  688 },
+	{ 2265600,  724 },
+	{ 2361600,  773 },
+	{ 2457600,  849 },
+	{ 2553600,  933 },
+	{ 2649600,  979 },
+	{ 2745600, 1042 },
+	{ 2841600, 1079 },
+	{ 2956800, 1285 },
+};
+
+static const struct em_freq_power em_prime_eff[] = {
+	{  844800,  171 },
+	{  960000,  245 },
+	{ 1075200,  269 },
+	{ 1190400,  292 },
+	{ 1305600,  322 },
+	{ 1401600,  351 },
+	{ 1516800,  389 },
+	{ 1632000,  431 },
+	{ 1747200,  464 },
+	{ 1862400,  490 },
+	{ 1977600,  544 },
+	{ 2073600,  576 },
+	{ 2169600,  688 },
+	{ 2265600,  724 },
+	{ 2361600,  773 },
+	{ 2457600,  849 },
+	{ 2553600,  933 },
+};
+
+static const struct em_freq_power *osm_em_get_table(int cpu, unsigned int *size)
+{
+	bool eff = e404_data.effcpu;
+
+	if (cpu <= 3) {
+		if (eff) { *size = ARRAY_SIZE(em_silver_eff); return em_silver_eff; }
+		else     { *size = ARRAY_SIZE(em_silver_def); return em_silver_def; }
+	} else if (cpu <= 6) {
+		if (eff) { *size = ARRAY_SIZE(em_gold_eff); return em_gold_eff; }
+		else     { *size = ARRAY_SIZE(em_gold_def); return em_gold_def; }
+	} else {
+		if (eff) { *size = ARRAY_SIZE(em_prime_eff); return em_prime_eff; }
+		else     { *size = ARRAY_SIZE(em_prime_def); return em_prime_def; }
+	}
+}
+
+static int osm_em_active_power(unsigned long *power, unsigned long *freq, int cpu)
+{
+	const struct em_freq_power *table;
+	unsigned int size, i;
+	unsigned long freq_khz = *freq / 1000;
+
+	table = osm_em_get_table(cpu, &size);
+
+	for (i = 0; i < size; i++) {
+		if (table[i].freq_khz >= freq_khz) {
+			*freq  = (unsigned long)table[i].freq_khz * 1000;
+			*power = table[i].power_mw;
+			return 0;
+		}
+	}
+
+	/* freq above table max — clamp to last entry */
+	*freq  = (unsigned long)table[size - 1].freq_khz * 1000;
+	*power = table[size - 1].power_mw;
+	return 0;
+}
+
+static struct em_data_callback osm_em_cb = EM_DATA_CB(osm_em_active_power);
+
+static void osm_register_em(struct cpufreq_policy *policy)
+{
+	unsigned int size;
+
+	osm_em_get_table(policy->cpu, &size);
+	em_register_perf_domain(policy->cpus, size, &osm_em_cb);
+}
+
+#else
+static inline void osm_register_em(struct cpufreq_policy *policy) {}
+#endif /* CONFIG_ENERGY_MODEL */
+
 static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *table;
@@ -840,6 +1000,8 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	}
 
 	cpumask_copy(policy->cpus, &c->related_cpus);
+
+	osm_register_em(policy);
 
 	return 0;
 
