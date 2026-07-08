@@ -831,16 +831,14 @@ static void binder_do_set_priority(struct binder_thread *thread,
 		return;
 	}
 
-	/* Set the actual priority and uclamp */
+	/* Set the actual priority */
 	if (task->policy != policy || is_rt_policy(policy)) {
-		attrs.sched_policy = policy;
-		attrs.sched_priority = is_rt_policy(policy) ? priority : 0;
-		attrs.sched_nice = PRIO_TO_NICE(task->static_prio);
-	} else {
-		attrs.sched_flags |= SCHED_FLAG_KEEP_ALL;
+	struct sched_param params;
+	params.sched_priority = is_rt_policy(policy) ? priority : 0;
+	sched_setscheduler_nocheck(task,
+								policy | SCHED_RESET_ON_FORK,
+								&params);
 	}
-
-	sched_setattr_nocheck(task, &attrs);
 
 	if (is_fair_policy(policy))
 		set_user_nice(task, priority);
