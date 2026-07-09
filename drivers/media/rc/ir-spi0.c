@@ -17,6 +17,7 @@
 #include <linux/uaccess.h>
 #include <uapi/linux/lirc.h>
 #include <media/rc-core.h>
+#include <linux/e404_attributes.h>
 
 #define IR_SPI_DRIVER_NAME		"ir-spi"
 
@@ -346,7 +347,25 @@ static struct spi_driver ir_spi_driver = {
 	},
 };
 
-module_spi_driver(ir_spi_driver);
+static int __init ir_spi0_init(void)
+{
+	/* Abort silently if the boot parameter wasn't passed */
+	if (e404_data.ir) {
+		pr_info("E404: prevent ir0 from loading");
+		return 0;
+	}
+		
+	return spi_register_driver(&ir_spi_driver);
+}
+
+static void __exit ir_spi0_exit(void)
+{
+	if (!e404_data.ir)
+		spi_unregister_driver(&ir_spi_driver);
+}
+
+module_init(ir_spi0_init);
+module_exit(ir_spi0_exit);
 
 MODULE_AUTHOR("Andi Shyti <andi@etezian.org>");
 MODULE_DESCRIPTION("SPI IR LED Dual Mode");

@@ -24,6 +24,7 @@ struct e404_attributes {
     char bg_blocklist[E404_BLOCKLIST_STRLEN];
     bool ksu;
     bool dtbo130;
+    bool ir;
 };
 
 extern struct e404_attributes e404_data;
@@ -35,7 +36,6 @@ extern bool early_dtbo_130;
 
 extern int early_lyb_override;
 extern bool early_lyb_pressure;
-
 extern int lyb_override;
 extern int lyb_angle_callback;
 extern int lyb_touch_game_mode;

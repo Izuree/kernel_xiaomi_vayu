@@ -23,6 +23,8 @@ bool early_dtbo_130 = 0;
 int early_lyb_override = 0;
 bool early_lyb_pressure = false;
 
+int early_ir_type = 0;
+
 
 struct e404_attributes e404_data = {
     .effcpu                     = 0,
@@ -81,6 +83,10 @@ static int __init parse_e404_args(char *str)
             early_lyb_override = 2;
             early_lyb_pressure = true;
         }
+        else if (strcmp(arg, "ir0") == 0)
+            early_ir_type = 0;
+        else if (strcmp(arg, "ir1") == 0)
+            early_ir_type = 1;
         else 
             pr_alert("E404: Unknown flag: %s\n", arg);
     }
@@ -220,6 +226,7 @@ static void e404_parse_attributes(void) {
     e404_data.ksu = early_ksu;
     e404_data.dtbo130 = early_dtbo_130;
     lyb_override = early_lyb_override;
+    e404_data.ir = early_ir_type;
 }
 
 #define LYB_ATTR_RW(name) \
