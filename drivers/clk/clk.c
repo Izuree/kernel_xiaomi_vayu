@@ -3071,10 +3071,9 @@ static void clock_debug_print_enabled_clocks(struct seq_file *s)
 	struct clk_core *core;
 	int cnt = 0;
 
-	if (!mutex_trylock(&clk_debug_lock))
-		return;
-
 	clock_debug_output(s, 0, "Enabled clocks:\n");
+
+	mutex_lock(&clk_debug_lock);
 
 	hlist_for_each_entry(core, &clk_debug_list, debug_node)
 		cnt += clock_debug_print_clock(core, s);
@@ -3443,19 +3442,14 @@ EXPORT_SYMBOL_GPL(clk_debugfs_add_file);
 
 /*
  * Print the names of all enabled clocks and their parents if
- * debug_suspend is set from debugfs along with print_parent flag set to 1.
- * Otherwise if print_parent set to 0, print only enabled clocks
- *
+ * debug_suspend is set from debugfs.
  */
-void clock_debug_print_enabled(bool print_parent)
+void clock_debug_print_enabled(void)
 {
 	if (likely(!debug_suspend))
 		return;
 
-	if (print_parent)
-		clock_debug_print_enabled_clocks(NULL);
-	else
-		clock_debug_print_enabled_debug_suspend(NULL);
+	clock_debug_print_enabled_debug_suspend(NULL);
 }
 EXPORT_SYMBOL_GPL(clock_debug_print_enabled);
 
