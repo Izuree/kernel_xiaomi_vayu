@@ -3531,7 +3531,7 @@ void clk_debug_print_hw(struct clk_core *clk, struct seq_file *f)
 {
 }
 
-void clock_debug_print_enabled(bool print_parent)
+void clock_debug_print_enabled(void)
 {
 }
 #endif
