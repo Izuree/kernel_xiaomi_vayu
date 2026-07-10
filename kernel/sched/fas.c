@@ -26,6 +26,7 @@
 #include <linux/input.h>
 #include <linux/atomic.h>
 #include <drm/drm_refresh_rate.h>
+#include <linux/e404_attributes.h>
 
 struct fas_cpu_sync {
 	int cpu;
@@ -94,6 +95,9 @@ static void fas_do_boost(struct work_struct *work)
 {
 	unsigned int fps = dsi_panel_get_refresh_rate();
 	unsigned int i;
+
+	if (!e404_data.fas)
+		return;
 
 	if (fps <= 60)
 		return;

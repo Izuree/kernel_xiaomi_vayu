@@ -36,6 +36,7 @@ struct e404_attributes e404_data = {
     .panel_height               = 155,
     .bg_blocklist               = "com.shopee.id,com.lazada.android,com.tokopedia.tkpd",
     .effcpu                     = 1,
+    .fas                        = 1,
 };
 
 static int  blocked_cnt;
@@ -192,11 +193,13 @@ E404_ATTR_RO(panel_height);
 E404_ATTR_RO(ksu);
 E404_ATTR_RW(kgsl_skip_zeroing);
 E404_ATTR_RW(file_sync);
+E404_ATTR_RW(fas);
 
 static struct attribute *e404_attrs[] = {
     &kgsl_skip_zeroing_attr.attr,
     &file_sync_attr.attr,
     &bg_blocklist_attr.attr,
+    &fas_attr.attr,
     NULL,
 };
 

@@ -25,6 +25,7 @@ struct e404_attributes {
     bool ksu;
     bool dtbo130;
     bool ir;
+    bool fas;
 };
 
 extern struct e404_attributes e404_data;
