@@ -1210,14 +1210,12 @@
 			qcom,target-dev = <&cpu0_cpu_l3_lat>;
 			qcom,cachemiss-ev = <0x17>;
 			qcom,core-dev-table =
-				<  300000  300000000 >,
-				<  480000  403200000 >,
-				<  672000  480000000 >,
-				<  768000  576000000 >,
-				<  864000  672000000 >,
-				<  979200  768000000 >,
-				< 1075200  864000000 >,
-				< 1267200  960000000 >;
+				< 1171200  300000000 >,
+				< 1248000  403200000 >,
+				< 1344000  576000000 >,
+				< 1440000  768000000 >,
+				< 1536000  960000000 >,
+				< 1612800 1075200000 >;
 		};
 
 		cpu0_cpu_llcc_latmon: qcom,cpu0-cpu-llcc-latmon {
@@ -1225,10 +1223,11 @@
 			qcom,target-dev = <&cpu0_cpu_llcc_lat>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				<  300000 MHZ_TO_MBPS(150, 16) >,
-				<  768000 MHZ_TO_MBPS(200, 16) >,
-				< 1075200 MHZ_TO_MBPS(403, 16) >,
-				< 1267200 MHZ_TO_MBPS(403, 16) >;
+				< 1171200 MHZ_TO_MBPS(150, 16) >,
+				< 1248000 MHZ_TO_MBPS(200, 16) >,
+				< 1344000 MHZ_TO_MBPS(403, 16) >,
+				< 1440000 MHZ_TO_MBPS(533, 16) >,
+				< 1612800 MHZ_TO_MBPS(666, 16) >;
 		};
 
 		cpu0_llcc_ddr_latmon: qcom,cpu0-llcc-ddr-latmon {
@@ -1236,10 +1235,12 @@
 			qcom,target-dev = <&cpu0_llcc_ddr_lat>;
 			qcom,cachemiss-ev = <0x1000>;
 			qcom,core-dev-table =
-				<  300000 MHZ_TO_MBPS( 200, 4) >,
-				<  768000 MHZ_TO_MBPS( 451, 4) >,
-				< 1075200 MHZ_TO_MBPS( 547, 4) >,
-				< 1267200 MHZ_TO_MBPS( 768, 4) >;
+				< 1171200 MHZ_TO_MBPS( 200, 4) >,
+				< 1248000 MHZ_TO_MBPS( 300, 4) >,
+				< 1344000 MHZ_TO_MBPS( 451, 4) >,
+				< 1440000 MHZ_TO_MBPS( 547, 4) >,
+				< 1536000 MHZ_TO_MBPS( 768, 4) >,
+				< 1612800 MHZ_TO_MBPS(1017, 4) >;
 		};
 	};
 
@@ -1253,12 +1254,13 @@
 			qcom,target-dev = <&cpu4_cpu_l3_lat>;
 			qcom,cachemiss-ev = <0x17>;
 			qcom,core-dev-table =
-				<  300000  300000000 >,
-				<  768000  576000000 >,
-				< 1152000  768000000 >,
-				< 1344000  960000000 >,
-				< 1689600 1228800000 >,
-				< 2016000 1344000000 >;
+				<  825600  300000000 >,
+				< 1248000  403200000 >,
+				< 1344000  576000000 >,
+				< 1536000  768000000 >,
+				< 1728000  960000000 >,
+				< 1958400 1228800000 >,
+				< 2054400 1344000000 >;
 		};
 
 		cpu4_cpu_llcc_latmon: qcom,cpu4-cpu-llcc-latmon {
@@ -1266,13 +1268,12 @@
 			qcom,target-dev = <&cpu4_cpu_llcc_lat>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				<  300000 MHZ_TO_MBPS(150, 16) >,
-				<  576000 MHZ_TO_MBPS(200, 16) >,
-				<  768000 MHZ_TO_MBPS(403, 16) >,
-				<  960000 MHZ_TO_MBPS(403, 16) >,
-				< 1248000 MHZ_TO_MBPS(533, 16) >,
+				<  825600 MHZ_TO_MBPS(150, 16) >,
+				< 1248000 MHZ_TO_MBPS(200, 16) >,
+				< 1344000 MHZ_TO_MBPS(403, 16) >,
+				< 1536000 MHZ_TO_MBPS(533, 16) >,
 				< 1728000 MHZ_TO_MBPS(666, 16) >,
-				< 2016000 MHZ_TO_MBPS(777, 16) >;
+				< 2054400 MHZ_TO_MBPS(777, 16) >;
 		};
 
 		cpu4_llcc_ddr_latmon: qcom,cpu4-llcc-ddr-latmon {
@@ -1280,13 +1281,12 @@
 			qcom,target-dev = <&cpu4_llcc_ddr_lat>;
 			qcom,cachemiss-ev = <0x1000>;
 			qcom,core-dev-table =
-				<  300000 MHZ_TO_MBPS( 200, 4) >,
-				<  576000 MHZ_TO_MBPS( 451, 4) >,
-				<  768000 MHZ_TO_MBPS( 547, 4) >,
-				<  960000 MHZ_TO_MBPS( 768, 4) >,
-				< 1248000 MHZ_TO_MBPS(1017, 4) >,
-				< 1728000 MHZ_TO_MBPS(1555, 4) >,
-				< 2016000 MHZ_TO_MBPS(1804, 4) >,
+				<  825600 MHZ_TO_MBPS( 200, 4) >,
+				< 1248000 MHZ_TO_MBPS( 451, 4) >,
+				< 1344000 MHZ_TO_MBPS( 547, 4) >,
+				< 1536000 MHZ_TO_MBPS( 768, 4) >,
+				< 1728000 MHZ_TO_MBPS(1017, 4) >,
+				< 1958400 MHZ_TO_MBPS(1555, 4) >,
 				< 2054400 MHZ_TO_MBPS(2092, 4) >;
 		};
 
@@ -1310,12 +1310,14 @@
 			qcom,target-dev = <&cpu7_cpu_l3_lat>;
 			qcom,cachemiss-ev = <0x17>;
 			qcom,core-dev-table =
-				<  300000  300000000 >,
-				<  768000  576000000 >,
-				< 1152000  768000000 >,
-				< 1344000  960000000 >,
-				< 1689600 1228800000 >,
-				< 2016000 1344000000 >;
+				<  844800  300000000 >,
+				< 1248000  403200000 >,
+				< 1344000  576000000 >,
+				< 1536000  768000000 >,
+				< 1728000  960000000 >,
+				< 2016000 1228800000 >,
+				< 2457600 1344000000 >,
+				< 2841600 1612800000 >;
 		};
 	};
 
