@@ -4576,6 +4576,11 @@ int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 
 int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 {
+	/* fuck cabc
+	*	-deu
+	*/
+	return 0;
+
 	static const enum dsi_cmd_set_type type_map[] = {
 		DSI_CMD_SET_DISP_CABC_OFF,
 		DSI_CMD_SET_DISP_CABC_UI_ON,
