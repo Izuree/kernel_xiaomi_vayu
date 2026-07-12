@@ -1492,7 +1492,7 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		goto error;
 	}
 
-	if (e404_data.dtbo130) {
+	if (e404_data.dtbo130 && e404_data.dtbo_type == 1 ) {
     	static const u32 e404_dfps_list[] = { 130,60 };
     	dfps_caps->dfps_list_len = ARRAY_SIZE(e404_dfps_list);
     	dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len,
@@ -1504,6 +1504,18 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
     	memcpy(dfps_caps->dfps_list, e404_dfps_list,
         	   dfps_caps->dfps_list_len * sizeof(u32));
     	dfps_caps->dfps_support = true;
+	} else if (e404_data.dtbo_type == 2) {
+		static const u32 e404_dfps_miui[] = { 121, 120, 100, 90, 75, 60, 50, 30 };
+		dfps_caps->dfps_list_len = ARRAY_SIZE(e404_dfps_miui);
+		dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len,
+					       sizeof(u32), GFP_KERNEL);
+		if (!dfps_caps->dfps_list) {
+			rc = -ENOMEM;
+			goto error;
+		}
+		memcpy(dfps_caps->dfps_list, e404_dfps_miui,
+		       dfps_caps->dfps_list_len * sizeof(u32));
+		dfps_caps->dfps_support = true;
 	} else {
     	dfps_caps->dfps_list_len = utils->count_u32_elems(utils->data,
         	            "qcom,dsi-supported-dfps-list");
