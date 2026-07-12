@@ -363,6 +363,31 @@ static int cpuhp_osm_online(unsigned int cpu)
 	return 0;
 }
 
+/**
+ * osm_interactive_boost - slam Gold CPU cores to max freq on fingerprint touch.
+ *
+ * Only targets Gold (perfcl) cores — Prime (CPU7) is left to the governor
+ * since we don't need it for the TEE scan, and Silver CPUs are already
+ * handled by the wakeup path.
+ */
+void osm_interactive_boost(void)
+{
+	int cpu;
+
+	for (cpu = 4; cpu <= 6; cpu++) {
+		struct osm_cpufreq_boost *b = &per_cpu(osm_boost_pcpu, cpu);
+		struct clk_osm *c = b->c;
+
+		if (!c || !c->vbase)
+			continue;
+
+		clk_osm_write_reg(c, b->max_index,
+				  DCVS_PERF_STATE_DESIRED_REG(c->core_num));
+		clk_osm_mb(c);
+	}
+}
+EXPORT_SYMBOL_GPL(osm_interactive_boost);
+
 static int l3_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 				    unsigned long parent_rate)
 {
