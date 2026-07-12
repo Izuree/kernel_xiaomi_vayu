@@ -56,6 +56,8 @@
 		qcom,mdss-dsi-pan-fps-update =
 			"dfps_immediate_porch_mode_vfp";
 		qcom,dsi-supported-dfps-list = <120 100 90 75 60 50 48 30>;
+		mi,mdss-dsi-dfps-dec-vfp-list = <20 0 20 0 0 0 0 0 0 0 0 0>;
+		mi,mdss-dsi-dfps-dec-hfp-list = <0 0 0 0 0 0 4 0 4 0 0 0>;
 		qcom,dispparam-enabled;
 		qcom,mdss-dsi-display-timings {
 			timing@0{
