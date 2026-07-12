@@ -39,11 +39,24 @@
 #include <linux/fb.h>
 #include <drm/drm_bridge.h>
 #include <linux/msm_drm_notify.h>
+#include <linux/cpumask.h>
+#include <linux/irqdesc.h>
+#include <linux/sched.h>
+#include <linux/sched/rt.h>
 
 #define FPC1020_NAME "fpc1020"
 
 #define FPC_SCREEN_HOLD_TIME 2000
 #define FPC_TTW_HOLD_TIME 2000
+
+/*
+ * SM8150 CPU topology:
+ *   CPU0-3 = Silver (Cortex-A55)
+ *   CPU4-6 = Gold   (Cortex-A76)
+ *   CPU7   = Prime  (Cortex-A76+)
+ * Pin the FPC IRQ to the first Gold core for lower service latency.
+ */
+#define FPC_IRQ_PREFERRED_CPU	4
 
 #define RESET_LOW_SLEEP_MIN_US 5000
 #define RESET_LOW_SLEEP_MAX_US (RESET_LOW_SLEEP_MIN_US + 100)
@@ -418,6 +431,23 @@ static int device_prepare(struct fpc1020_data *fpc1020, bool enable)
 
 		/* Request that the interrupt should be wakeable */
 		enable_irq_wake(gpio_to_irq(fpc1020->irq_gpio));
+
+		/* Pin IRQ to first Gold core; advisory but effective without irqbalance */
+		if (cpu_online(FPC_IRQ_PREFERRED_CPU))
+			irq_set_affinity_hint(gpio_to_irq(fpc1020->irq_gpio),
+					      cpumask_of(FPC_IRQ_PREFERRED_CPU));
+
+		/* Bump threaded IRQ handler to SCHED_FIFO:2 */
+		{
+			struct irq_desc *desc =
+				irq_to_desc(gpio_to_irq(fpc1020->irq_gpio));
+			struct sched_param param = { .sched_priority = 2 };
+
+			if (desc && desc->action && desc->action->thread)
+				sched_setscheduler_nocheck(desc->action->thread,
+							   SCHED_FIFO, &param);
+		}
+
 		select_pin_ctl(fpc1020, "fpc1020_reset_reset");
 #if 0
 		rc = vreg_setup(fpc1020, "vcc_spi", true);
@@ -466,6 +496,7 @@ exit_1:
 		(void)vreg_setup(fpc1020, "vcc_spi", false);
 #endif
 free_irq_exit:
+		irq_set_affinity_hint(gpio_to_irq(fpc1020->irq_gpio), NULL);
 		disable_irq(gpio_to_irq(fpc1020->irq_gpio));
 		devm_free_irq(dev, gpio_to_irq(fpc1020->irq_gpio), fpc1020);
 rst_gpio_exit:
