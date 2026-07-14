@@ -21,10 +21,6 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 
-#ifdef CONFIG_E404_ATTRIBUTES
-#include <linux/e404_attributes.h>
-#endif
-
 /**
  * generic_fillattr - Fill in the basic attributes from the inode struct
  * @inode: Inode to use as the source
@@ -367,10 +363,7 @@ SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,
 	struct kstat stat;
 	int error;
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		ksu_handle_stat(&dfd, &filename, &flag);
+	ksu_handle_stat(&dfd, &filename, &flag);
 #endif
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)
@@ -516,10 +509,7 @@ SYSCALL_DEFINE4(fstatat64, int, dfd, const char __user *, filename,
 	struct kstat stat;
 	int error;
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		ksu_handle_stat(&dfd, &filename, &flag);
+	ksu_handle_stat(&dfd, &filename, &flag);
 #endif
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)

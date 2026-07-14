@@ -22,7 +22,6 @@ struct e404_attributes {
     int panel_width;
     int panel_height;
     char bg_blocklist[E404_BLOCKLIST_STRLEN];
-    bool ksu;
     bool dtbo130;
     bool ir;
     bool fas;

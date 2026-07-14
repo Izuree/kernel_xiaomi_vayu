@@ -17,9 +17,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
 
-#ifdef CONFIG_E404_ATTRIBUTES
-#include <linux/e404_attributes.h>
-#endif
 
 /*
  * this indicates whether you can reboot with ctrl-alt-del: the default is yes
@@ -291,10 +288,7 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	char buffer[256];
 	int ret = 0;
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		ksu_handle_sys_reboot(magic1, magic2, cmd, &arg);
+	ksu_handle_sys_reboot(magic1, magic2, cmd, &arg);
 #endif
 	/* We only trust the superuser with rebooting the system. */
 	if (!ns_capable(pid_ns->user_ns, CAP_SYS_BOOT))

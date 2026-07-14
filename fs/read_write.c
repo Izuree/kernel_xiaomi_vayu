@@ -25,10 +25,6 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 
-#ifdef CONFIG_E404_ATTRIBUTES
-#include <linux/e404_attributes.h>
-#endif
-
 
 const struct file_operations generic_ro_fops = {
 	.llseek		= generic_file_llseek,
@@ -579,11 +575,8 @@ extern int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr, size_t *c
 SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 {
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		if (unlikely(ksu_vfs_read_hook))
-			ksu_handle_sys_read(fd, &buf, &count);
+	if (unlikely(ksu_vfs_read_hook))
+		ksu_handle_sys_read(fd, &buf, &count);
 #endif
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;

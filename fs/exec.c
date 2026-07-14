@@ -72,9 +72,6 @@
 
 #include <trace/events/sched.h>
 
-#ifdef CONFIG_E404_ATTRIBUTES
-#include <linux/e404_attributes.h>
-#endif
 int suid_dumpable = 0;
 
 #define LIBPERFMGR "/vendor/bin/hw/android.hardware.power-service.xiaomi-libperfmgr"
@@ -2015,10 +2012,7 @@ int do_execve(struct filename *filename,
 	struct user_arg_ptr argv = { .ptr.native = __argv };
 	struct user_arg_ptr envp = { .ptr.native = __envp };
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
+	ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
 #endif
 	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
 }
@@ -2048,10 +2042,7 @@ static int compat_do_execve(struct filename *filename,
 		.ptr.compat = __envp,
 	};
 #ifdef CONFIG_KSU
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (e404_data.ksu)
-#endif
-		ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
+	ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
 #endif
 	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
 }

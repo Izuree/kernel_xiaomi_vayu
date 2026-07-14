@@ -17,7 +17,6 @@ int early_dtbo_type = 2;
 #else
 int early_dtbo_type = 1;
 #endif
-bool early_ksu = 1;
 bool early_dtbo_130 = 0;
 
 int early_lyb_override = 0;
@@ -68,10 +67,6 @@ static int __init parse_e404_args(char *str)
             early_dtbo_130 = 0;
         else if (strcmp(arg, "dtbo_130") == 0)
             early_dtbo_130 = 1;
-        else if (strcmp(arg, "ksu") == 0)
-            early_ksu = 1;
-        else if (strcmp(arg, "noksu") == 0)
-            early_ksu = 0;
         else if (strcmp(arg, "dtbo_def") == 0)
             early_dtbo_type = 1;
         else if (strcmp(arg, "dtbo_oem") == 0)
@@ -190,7 +185,6 @@ E404_ATTR_RO(rom_type);
 E404_ATTR_RO(dtbo_type);
 E404_ATTR_RO(panel_width);
 E404_ATTR_RO(panel_height);
-E404_ATTR_RO(ksu);
 E404_ATTR_RW(kgsl_skip_zeroing);
 E404_ATTR_RW(file_sync);
 E404_ATTR_RW(fas);
@@ -213,7 +207,6 @@ static struct attribute *e404_prop_attrs[] = {
     &dtbo_type_attr.attr,
     &panel_width_attr.attr,
     &panel_height_attr.attr,
-    &ksu_attr.attr,
     NULL,
 };
 
@@ -226,7 +219,6 @@ static void e404_parse_attributes(void) {
     e404_data.effcpu      = early_effcpu;
     e404_data.rom_type    = early_rom_type;
     e404_data.dtbo_type   = early_dtbo_type;
-    e404_data.ksu = early_ksu;
     e404_data.dtbo130 = early_dtbo_130;
     lyb_override = early_lyb_override;
     e404_data.ir = early_ir_type;
