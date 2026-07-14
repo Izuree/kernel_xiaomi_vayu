@@ -456,6 +456,19 @@ static void request_wait_answer(struct fuse_conn *fc, struct fuse_req *req)
 
 	if (!test_bit(FR_FORCE, &req->flags)) {
 		/* Only fatal signals may interrupt this */
+		/*
+		 * If the task is being frozen (e.g. during suspend), bail out
+		 * before entering an unfreezable killable sleep. The FUSE daemon
+		 * may already be frozen and unable to respond, which would cause
+		 * us to block indefinitely and prevent suspend from completing.
+		 * Returning -EINTR here allows the freezer to proceed; the
+		 * syscall will be restarted transparently after resume.
+		 */
+		if (unlikely(freezing(current))) {
+			req->out.h.error = -EINTR;
+			return;
+		}
+
 		err = wait_event_killable(req->waitq,
 					test_bit(FR_FINISHED, &req->flags));
 		if (!err)
