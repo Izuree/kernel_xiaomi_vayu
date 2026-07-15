@@ -9,6 +9,8 @@
 #include <linux/types.h>
 #include <linux/cgroup.h>
 #include <linux/eventfd.h>
+#include <linux/spinlock.h>
+#include <linux/atomic.h>
 
 struct vmpressure {
 	unsigned long scanned;
@@ -19,6 +21,10 @@ struct vmpressure {
 	unsigned long stall;
 	/* The lock is used to keep the scanned/reclaimed above in sync. */
 	struct spinlock sr_lock;
+
+	/* Counts page allocator slow-path waiters needing memory freed */
+	atomic_long_t users;
+	rwlock_t users_lock;
 
 	/* The list of vmpressure_event structs. */
 	struct list_head events;
@@ -33,8 +39,12 @@ struct mem_cgroup;
 extern int vmpressure_notifier_register(struct notifier_block *nb);
 extern int vmpressure_notifier_unregister(struct notifier_block *nb);
 extern void vmpressure(gfp_t gfp, struct mem_cgroup *memcg, bool tree,
-		       unsigned long scanned, unsigned long reclaimed);
-extern void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio);
+		       unsigned long scanned, unsigned long reclaimed,
+		       int order);
+extern void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio,
+			    int order);
+extern bool vmpressure_inc_users(int order);
+extern void vmpressure_dec_users(void);
 
 #ifdef CONFIG_MEMCG
 extern void vmpressure_init(struct vmpressure *vmpr);

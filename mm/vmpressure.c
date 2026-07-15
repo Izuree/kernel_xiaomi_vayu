@@ -375,45 +375,48 @@ static void calculate_vmpressure_win(void)
 	vmpressure_win = x;
 }
 
-static void vmpressure_global(gfp_t gfp, unsigned long scanned,
+static void vmpressure_global(gfp_t gfp, unsigned long scanned, bool critical,
 		unsigned long reclaimed)
 {
 	struct vmpressure *vmpr = &global_vmpressure;
 	unsigned long pressure;
 	unsigned long stall;
+	unsigned long flags;
 
-	if (!(gfp & (__GFP_HIGHMEM | __GFP_MOVABLE | __GFP_IO | __GFP_FS)))
-		return;
+	if (critical)
+		scanned = vmpressure_win;
 
-	if (!scanned)
-		return;
+	spin_lock_irqsave(&vmpr->sr_lock, flags);
+	if (scanned) {
+		if (!vmpr->scanned)
+			calculate_vmpressure_win();
 
-	spin_lock(&vmpr->sr_lock);
-	if (!vmpr->scanned)
-		calculate_vmpressure_win();
+		vmpr->scanned += scanned;
+		vmpr->reclaimed += reclaimed;
 
-	vmpr->scanned += scanned;
-	vmpr->reclaimed += reclaimed;
+		if (!current_is_kswapd())
+			vmpr->stall += scanned;
 
-	if (!current_is_kswapd())
-		vmpr->stall += scanned;
+		stall = vmpr->stall;
+		scanned = vmpr->scanned;
+		reclaimed = vmpr->reclaimed;
 
-	stall = vmpr->stall;
-	scanned = vmpr->scanned;
-	reclaimed = vmpr->reclaimed;
-	spin_unlock(&vmpr->sr_lock);
-
-	if (scanned < vmpressure_win)
-		return;
-
-	spin_lock(&vmpr->sr_lock);
+		if (!critical && scanned < vmpressure_win) {
+			spin_unlock_irqrestore(&vmpr->sr_lock, flags);
+			return;
+		}
+	}
 	vmpr->scanned = 0;
 	vmpr->reclaimed = 0;
 	vmpr->stall = 0;
-	spin_unlock(&vmpr->sr_lock);
+	spin_unlock_irqrestore(&vmpr->sr_lock, flags);
 
-	pressure = vmpressure_calc_pressure(scanned, reclaimed);
-	pressure = vmpressure_account_stall(pressure, stall, scanned);
+	if (scanned) {
+		pressure = vmpressure_calc_pressure(scanned, reclaimed);
+		pressure = vmpressure_account_stall(pressure, stall, scanned);
+	} else {
+		pressure = 100;
+	}
 	vmpressure_notify(pressure);
 }
 
@@ -439,10 +442,29 @@ static void vmpressure_global(gfp_t gfp, unsigned long scanned,
  * This function does not return any value.
  */
 void vmpressure(gfp_t gfp, struct mem_cgroup *memcg, bool tree,
-		unsigned long scanned, unsigned long reclaimed)
+		unsigned long scanned, unsigned long reclaimed, int order)
 {
+	struct vmpressure *vmpr = &global_vmpressure;
+	unsigned long flags;
+
+	if (order > PAGE_ALLOC_COSTLY_ORDER)
+		return;
+
+	/*
+	 * It's possible for kswapd to keep doing reclaim even though memory
+	 * pressure isn't high anymore. We should only track vmpressure when
+	 * there are failed memory allocations actively stuck in the page
+	 * allocator's slow path. No failed allocations means pressure is fine.
+	 */
+	read_lock_irqsave(&vmpr->users_lock, flags);
+	if (!atomic_long_read(&vmpr->users)) {
+		read_unlock_irqrestore(&vmpr->users_lock, flags);
+		return;
+	}
+	read_unlock_irqrestore(&vmpr->users_lock, flags);
+
 	if (!memcg && tree)
-		vmpressure_global(gfp, scanned, reclaimed);
+		vmpressure_global(gfp, scanned, false, reclaimed);
 
 	if (IS_ENABLED(CONFIG_MEMCG))
 		vmpressure_memcg(gfp, memcg, tree, scanned, reclaimed);
@@ -459,8 +481,11 @@ void vmpressure(gfp_t gfp, struct mem_cgroup *memcg, bool tree,
  *
  * This function does not return any value.
  */
-void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio)
+void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio, int order)
 {
+	if (order > PAGE_ALLOC_COSTLY_ORDER)
+		return;
+
 	/*
 	 * We only use prio for accounting critical level. For more info
 	 * see comment for vmpressure_level_critical_prio variable above.
@@ -475,7 +500,7 @@ void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio)
 	 * to the vmpressure() basically means that we signal 'critical'
 	 * level.
 	 */
-	vmpressure(gfp, memcg, true, vmpressure_win, 0);
+	vmpressure_global(gfp, 0, true, 0);
 }
 
 static enum vmpressure_levels str_to_level(const char *arg)
@@ -628,9 +653,42 @@ void vmpressure_cleanup(struct vmpressure *vmpr)
 	flush_work(&vmpr->work);
 }
 
+bool vmpressure_inc_users(int order)
+{
+	struct vmpressure *vmpr = &global_vmpressure;
+	unsigned long flags;
+
+	if (order > PAGE_ALLOC_COSTLY_ORDER)
+		return false;
+
+	write_lock_irqsave(&vmpr->users_lock, flags);
+	if (atomic_long_inc_return_relaxed(&vmpr->users) == 1) {
+		/* Clear out stale vmpressure data when reclaim begins */
+		spin_lock(&vmpr->sr_lock);
+		vmpr->scanned = 0;
+		vmpr->reclaimed = 0;
+		vmpr->stall = 0;
+		spin_unlock(&vmpr->sr_lock);
+	}
+	write_unlock_irqrestore(&vmpr->users_lock, flags);
+
+	return true;
+}
+
+void vmpressure_dec_users(void)
+{
+	struct vmpressure *vmpr = &global_vmpressure;
+
+	/* Decrement the vmpressure user count with release semantics */
+	smp_mb__before_atomic();
+	atomic_long_dec(&vmpr->users);
+}
+
 static int vmpressure_global_init(void)
 {
 	vmpressure_init(&global_vmpressure);
+	atomic_long_set(&global_vmpressure.users, 0);
+	rwlock_init(&global_vmpressure.users_lock);
 	return 0;
 }
 late_initcall(vmpressure_global_init);
