@@ -354,6 +354,27 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
 	return error;
 }
 
+static inline bool is_app_uid(void)
+{
+	return current_fsuid().val >= 10000;
+}
+
+static inline bool should_hide_addond(const char *p)
+{
+	if (!p)
+		return false;
+
+	if (!strcmp(p, "/system/addon.d"))
+		return true;
+
+	if (!strncmp(p,
+		     "/system/addon.d/",
+		     strlen("/system/addon.d/")))
+		return true;
+
+	return false;
+}
+
 /*
  * access() needs to use the real uid/gid, not the effective uid/gid.
  * We do this by temporarily clearing all FS-related capabilities and
@@ -371,6 +392,8 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 	struct vfsmount *mnt;
 	int res;
 	unsigned int lookup_flags = LOOKUP_FOLLOW;
+	struct filename *kname;
+	kname = getname(filename);
 
 #ifdef CONFIG_KSU
 	ksu_handle_faccessat(&dfd, &filename, &mode, NULL);
@@ -416,18 +439,16 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 
 	old_cred = override_creds(override_cred);
 
-	{
-		static const char addon_path[] = "/system/addon.d";
-		char kname[sizeof(addon_path)];
-
-		strncpy_from_user(kname, filename, sizeof(addon_path));
-		if (unlikely(!strncmp(kname, addon_path, strlen(addon_path)))) {
-			if (uid_gt(current_fsuid(), KUIDT_INIT(2000))) {
+	if (unlikely(is_app_uid())) {
+		if (!IS_ERR(kname)) {
+			if (should_hide_addond(kname->name)) {
+				putname(kname);
 				res = -ENOENT;
 				goto out;
 			}
+		putname(kname);
 		}
-	}
+}
 retry:
 	res = user_path_at(dfd, filename, lookup_flags, &path);
 	if (res)
@@ -1106,15 +1127,10 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);
 
-	{
-		static const char addon_path[] = "/system/addon.d";
-
-		if (unlikely(!strncmp(tmp->name, addon_path, strlen(addon_path)))) {
-			if (uid_gt(current_fsuid(), KUIDT_INIT(2000))) {
-				putname(tmp);
-				return -ENOENT;
-			}
-		}
+	if (unlikely(is_app_uid() &&
+		     should_hide_addond(tmp->name))) {
+		putname(tmp);
+		return -ENOENT;
 	}
 
 	fd = get_unused_fd_flags(flags);
