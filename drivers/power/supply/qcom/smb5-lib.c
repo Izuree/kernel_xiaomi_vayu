@@ -3157,15 +3157,24 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 		return rc;
 	}
 
+	if (!chg->cp_disable_votable)
+		chg->cp_disable_votable = find_votable("CP_DISABLE");
+
 	if (val->intval == 1) {
 		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 1, 0);
 		bypass_charging = 1;
+		if (chg->cp_disable_votable)
+			vote(chg->cp_disable_votable, BYPASS_VOTER, 1, 0);
 	} else if (val->intval == 2) {
 		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 0, 0);
 		bypass_charging = 1;
+		if (chg->cp_disable_votable)
+			vote(chg->cp_disable_votable, BYPASS_VOTER, 0, 0);
 	} else {
 		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 0, 0);
 		bypass_charging = 0;
+		if (chg->cp_disable_votable)
+			vote(chg->cp_disable_votable, BYPASS_VOTER, 0, 0);
 	}
 
 	if (rc < 0) {
@@ -3173,9 +3182,6 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 			val->intval, rc);
 		return rc;
 	}
-
-	if (chg->use_bq_pump && is_bq25970_available(chg))
-		chg->bq_input_suspend = !!(val->intval);
 
 	power_supply_changed(chg->batt_psy);
 	return rc;
