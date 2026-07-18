@@ -58,13 +58,6 @@
  */
 #define FPC_IRQ_PREFERRED_CPU	4
 
-/*
- * Exported from drivers/clk/qcom/clk-cpu-osm.c — writes max OPP index
- * directly into DCVS_PERF_STATE_DESIRED_REG for Gold CPUs (4-6), bypassing
- * the governor ramp-up delay on fingerprint touch.
- */
-extern void osm_interactive_boost(void);
-
 #define RESET_LOW_SLEEP_MIN_US 5000
 #define RESET_LOW_SLEEP_MAX_US (RESET_LOW_SLEEP_MIN_US + 100)
 #define RESET_HIGH_SLEEP1_MIN_US 100
@@ -693,14 +686,6 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	if (atomic_read(&fpc1020->wakeup_enabled)) {
 		__pm_wakeup_event(&fpc1020->ttw_wl, FPC_TTW_HOLD_TIME);
 	}
-
-	/*
-	 * Directly write max OPP to Gold CPUs via OSM hardware registers,
-	 * bypassing governor ramp latency. Most impactful when waking from
-	 * screen-off (fb_black), but applied unconditionally since the TEE
-	 * scan benefits from high freq regardless of screen state.
-	 */
-	osm_interactive_boost();
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	if (fpc1020->fb_black && fpc1020->prepared)
