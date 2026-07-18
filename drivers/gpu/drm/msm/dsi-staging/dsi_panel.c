@@ -1493,7 +1493,7 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 	}
 
 	if (e404_data.dtbo130 && e404_data.dtbo_type == 1 ) {
-    	static const u32 e404_dfps_list[] = { 130,60 };
+		static const u32 e404_dfps_list[] = { 130,90,60 };
     	dfps_caps->dfps_list_len = ARRAY_SIZE(e404_dfps_list);
     	dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len,
                                     sizeof(u32), GFP_KERNEL);
