@@ -39,6 +39,7 @@ struct memlat_node {
 	unsigned int stall_floor;
 	unsigned int wb_pct_thres;
 	unsigned int wb_filter_ratio;
+	bool locked;
 	bool mon_started;
 	bool already_zero;
 	struct list_head list;
@@ -74,6 +75,8 @@ static ssize_t store_##name(struct device *dev,				\
 	struct memlat_node *hw = df->data;				\
 	int ret;							\
 	unsigned int val;						\
+	if (hw->locked)							\
+		return -EPERM;						\
 	ret = kstrtouint(buf, 10, &val);				\
 	if (ret)							\
 		return ret;						\
@@ -571,6 +574,16 @@ int register_memlat(struct device *dev, struct memlat_hwmon *hw)
 		ret = PTR_ERR(node);
 		goto out;
 	}
+
+	if (hw->of_node) {
+		if (of_node_name_eq(hw->of_node, "qcom,cpu7-cpu-l3-lat"))
+			node->ratio_ceil = 20000;
+		else if (of_node_name_eq(hw->of_node, "qcom,cpu4-cpu-l3-lat"))
+			node->ratio_ceil = 4000;
+		else
+			node->ratio_ceil = 400;
+	}
+	node->locked = true;
 
 	mutex_lock(&state_lock);
 	node->gov = &devfreq_gov_memlat;
