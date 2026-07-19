@@ -209,6 +209,7 @@ static int gov_start(struct devfreq *df)
 	if (ret)
 		goto err_sysfs;
 
+	df->governor_locked = true;
 	return 0;
 
 err_sysfs:
@@ -258,6 +259,7 @@ static void gov_stop(struct devfreq *df)
 	struct memlat_node *node = df->data;
 	struct memlat_hwmon *hw = node->hw;
 
+	df->governor_locked = false;
 	sysfs_remove_group(&df->dev.kobj, node->attr_grp);
 	stop_monitor(df);
 	df->data = node->orig_data;

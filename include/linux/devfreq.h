@@ -168,6 +168,7 @@ struct devfreq {
 
 	struct srcu_notifier_head transition_notifier_list;
 	bool dev_suspended;
+	bool governor_locked;
 };
 
 struct devfreq_freqs {

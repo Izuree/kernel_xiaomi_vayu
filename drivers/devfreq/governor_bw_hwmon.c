@@ -871,11 +871,13 @@ static int devfreq_bw_hwmon_ev_handler(struct devfreq *df,
 		if (ret)
 			goto out;
 
+		df->governor_locked = true;
 		dev_dbg(df->dev.parent,
 			"Enabled dev BW HW monitor governor\n");
 		break;
 
 	case DEVFREQ_GOV_STOP:
+		df->governor_locked = false;
 		gov_stop(df);
 		dev_dbg(df->dev.parent,
 			"Disabled dev BW HW monitor governor\n");
