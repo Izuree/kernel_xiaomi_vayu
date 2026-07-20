@@ -35,7 +35,7 @@ struct e404_attributes e404_data = {
     .file_sync                  = 1,
     .panel_width                = 70,
     .panel_height               = 155,
-    .bg_blocklist               = "com.shopee.id,com.lazada.android,com.tokopedia.tkpd",
+    .bg_blocklist               = "com.lazada.android,com.tokopedia.tkpd",
     .effcpu                     = 1,
     .fas                        = 1,
 };
