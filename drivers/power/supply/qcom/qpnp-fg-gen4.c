@@ -28,6 +28,9 @@
 #include "fg-reg.h"
 #include "fg-alg.h"
 
+#ifdef CONFIG_E404_ATTRIBUTES
+#include <linux/e404_attributes.h>
+#endif
 
 #undef dev_info
 #define dev_info(x, ...)
@@ -249,6 +252,7 @@ struct fg_dt_props {
 	bool	soc_hi_res;
 	bool	soc_scale_mode;
 	bool	shutdown_delay_enable;
+	bool	vayu_6000mah_profile;
 	int	*dec_rate_seq;
 	int	dec_rate_len;
 	int	cutoff_volt_mv;
@@ -1814,6 +1818,18 @@ static int fg_gen4_get_batt_profile(struct fg_dev *fg)
 	else {
 #ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 		profile_node = ERR_PTR(-ENXIO);
+#ifdef CONFIG_E404_ATTRIBUTES
+		/* force 6000mAh aftermarket profile if user opted in */
+		if (e404_data.batt_profile && chip->dt.vayu_6000mah_profile
+				&& !fg->profile_already_find) {
+			pr_alert("E404: forcing vayu_6000mah profile\n");
+			fg->profile_already_find = true;
+			retry_batt_profile = BATT_PROFILE_RETRY_COUNT_MAX;
+			profile_node = of_batterydata_get_best_profile(batt_node,
+						fg->batt_id_ohms / 1000,
+						"vayu_6000mah");
+		}
+#endif
 		/* if cmdline battery profile vendor is passed to fg driver, use cmdline result */
 		if (is_batt_vendor_sunwoda && !fg->profile_already_find) {
 			pr_err("is_batt_vendor_sunwoda is %d\n", is_batt_vendor_sunwoda);
@@ -6793,6 +6809,8 @@ static int fg_gen4_parse_dt(struct fg_gen4_chip *chip)
 	chip->dt.multi_profile_load = of_property_read_bool(node,
 					"qcom,multi-profile-load");
 	chip->dt.soc_hi_res = of_property_read_bool(node, "qcom,soc-hi-res");
+	chip->dt.vayu_6000mah_profile = of_property_read_bool(node,
+					"qcom,vayu-6000mah-profile");
 
 	chip->dt.sys_min_volt_mv = DEFAULT_SYS_MIN_VOLT_MV;
 	of_property_read_u32(node, "qcom,fg-sys-min-voltage",

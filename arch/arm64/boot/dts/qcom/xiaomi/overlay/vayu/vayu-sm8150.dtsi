@@ -24,6 +24,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 	qcom,rapid-soc-dec-en;
 	qcom,soc-scale-mode-en;
 	qcom,five-pin-battery;
+	qcom,vayu-6000mah-profile;
 	qcom,soc-hi-res;
 	qcom,soc_decimal_rate = <
 		0  38
@@ -281,6 +282,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 		qcom,batt-id-range-pct = <15>;
 		#include "../common/battery/fg-gen4-batterydata-vayu-NVT-5160mah.dtsi"
 		#include "../common/battery/fg-gen4-batterydata-vayu-sunwoda-5160mah.dtsi"
+		#include "../common/battery/fg-gen4-batterydata-vayu-6000mah.dtsi"
 	};
 
 	maxim_ds28e16: maxim_ds28e16 {

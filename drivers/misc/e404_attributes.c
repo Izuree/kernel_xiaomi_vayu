@@ -18,6 +18,7 @@ int early_dtbo_type = 2;
 int early_dtbo_type = 1;
 #endif
 bool early_dtbo_130 = 0;
+bool early_batt_profile = 0;
 
 int early_lyb_override = 0;
 bool early_lyb_pressure = false;
@@ -29,6 +30,7 @@ struct e404_attributes e404_data = {
     .effcpu                     = 0,
     .rom_type                   = 1,
     .dtbo_type                  = 0,
+    .batt_profile               = 0,
     .kgsl_skip_zeroing          = 0,
     .file_sync                  = 1,
     .panel_width                = 70,
@@ -83,7 +85,11 @@ static int __init parse_e404_args(char *str)
             early_ir_type = 0;
         else if (strcmp(arg, "ir1") == 0)
             early_ir_type = 1;
-        else 
+        else if (strcmp(arg, "batt_def") == 0)
+            early_batt_profile = 0;
+        else if (strcmp(arg, "batt_6k") == 0)
+            early_batt_profile = 1;
+        else
             pr_alert("E404: Unknown flag: %s\n", arg);
     }
 
@@ -183,6 +189,7 @@ static struct kobj_attribute name##_attr = __ATTR(name, 0664, name##_show, name#
 E404_ATTR_RO(effcpu);
 E404_ATTR_RO(rom_type);
 E404_ATTR_RO(dtbo_type);
+E404_ATTR_RO(batt_profile);
 E404_ATTR_RO(panel_width);
 E404_ATTR_RO(panel_height);
 E404_ATTR_RW(kgsl_skip_zeroing);
@@ -205,6 +212,7 @@ static struct attribute *e404_prop_attrs[] = {
     &effcpu_attr.attr,
     &rom_type_attr.attr,
     &dtbo_type_attr.attr,
+    &batt_profile_attr.attr,
     &panel_width_attr.attr,
     &panel_height_attr.attr,
     NULL,
@@ -222,6 +230,7 @@ static void e404_parse_attributes(void) {
     e404_data.dtbo130 = early_dtbo_130;
     lyb_override = early_lyb_override;
     e404_data.ir = early_ir_type;
+    e404_data.batt_profile = early_batt_profile;
 }
 
 #define LYB_ATTR_RW(name) \

@@ -17,6 +17,7 @@ struct e404_attributes {
     bool effcpu;
     int rom_type;
     int dtbo_type;
+    bool batt_profile;
     bool kgsl_skip_zeroing;
     bool file_sync;
     int panel_width;
