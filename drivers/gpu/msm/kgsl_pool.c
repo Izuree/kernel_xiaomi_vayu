@@ -74,14 +74,6 @@ _kgsl_pool_zero_page(struct page *p, unsigned int pool_order)
 {
 	int i;
 
-	if (!PageHighMem(p)) {
-		void *addr = page_address(p);
-
-		memset(addr, 0, PAGE_SIZE << pool_order);
-		dmac_flush_range(addr, addr + (PAGE_SIZE << pool_order));
-		return;
-	}
-
 	for (i = 0; i < (1 << pool_order); i++) {
 		struct page *page = nth_page(p, i);
 		void *addr = kmap_atomic(page);
@@ -230,20 +222,6 @@ kgsl_pool_reduce(unsigned int target_pages, bool exit)
 
 		/* Round up to integral number of pages in this pool */
 		nr_removed = ALIGN(nr_removed, 1 << pool->pool_order);
-
-		/*
-		 * Don't shrink below reserved_pages floor during normal
-		 * reclaim; reserved pages are only freed on driver exit.
-		 */
-		if (!exit) {
-			int shrinkable = pool->page_count -
-					(int)pool->reserved_pages;
-
-			if (shrinkable <= 0)
-				continue;
-			nr_removed = min_t(int, nr_removed,
-					shrinkable << pool->pool_order);
-		}
 
 		/* Remove nr_removed pages from this pool*/
 		pcount += _kgsl_pool_shrink(pool, nr_removed);

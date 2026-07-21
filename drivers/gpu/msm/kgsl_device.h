@@ -1,4 +1,5 @@
 /* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -656,25 +657,6 @@ static inline unsigned int kgsl_gpuid(struct kgsl_device *device,
 	return device->ftbl->gpuid(device, chipid);
 }
 
-static inline int kgsl_create_device_sysfs_files(struct device *root,
-	const struct device_attribute **list)
-{
-	int ret = 0, i;
-
-	for (i = 0; list[i] != NULL; i++)
-		ret |= device_create_file(root, list[i]);
-	return ret;
-}
-
-static inline void kgsl_remove_device_sysfs_files(struct device *root,
-	const struct device_attribute **list)
-{
-	int i;
-
-	for (i = 0; list[i] != NULL; i++)
-		device_remove_file(root, list[i]);
-}
-
 static inline struct kgsl_device *kgsl_device_from_dev(struct device *dev)
 {
 	int i;
@@ -719,22 +701,12 @@ static inline int kgsl_change_flag(struct kgsl_device *device,
 	return ret;
 }
 
-static inline int kgsl_readtimestamp(struct kgsl_device *device, void *priv,
-		enum kgsl_timestamp_type type, unsigned int *timestamp)
-{
-	return device->ftbl->readtimestamp(device, priv, type, timestamp);
-}
+int kgsl_readtimestamp(struct kgsl_device *device, void *priv,
+		enum kgsl_timestamp_type type, unsigned int *timestamp);
 
-static inline int kgsl_check_timestamp(struct kgsl_device *device,
-	struct kgsl_context *context, unsigned int timestamp)
-{
-	unsigned int ts_processed;
+int kgsl_check_timestamp(struct kgsl_device *device,
+		struct kgsl_context *context, unsigned int timestamp);
 
-	kgsl_readtimestamp(device, context, KGSL_TIMESTAMP_RETIRED,
-		&ts_processed);
-
-	return (timestamp_cmp(ts_processed, timestamp) >= 0);
-}
 int kgsl_device_platform_probe(struct kgsl_device *device);
 
 void kgsl_device_platform_remove(struct kgsl_device *device);

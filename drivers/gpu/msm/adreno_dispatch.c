@@ -1815,7 +1815,6 @@ static void process_cmdobj_fault(struct kgsl_device *device,
 			drawobj->context->fault_time = jiffies;
 			drawobj->context->fault_count = 1;
 		} else {
-			drawobj->context->fault_time = jiffies;
 			drawobj->context->fault_count++;
 			if (drawobj->context->fault_count >
 					_fault_throttle_burst) {
@@ -2078,6 +2077,30 @@ replay:
 	kfree(replay);
 }
 
+static void do_header_and_snapshot(struct kgsl_device *device, int fault,
+		struct adreno_ringbuffer *rb, struct kgsl_drawobj_cmd *cmdobj)
+{
+	struct kgsl_drawobj *drawobj = DRAWOBJ(cmdobj);
+
+	/* Always dump the snapshot on a non-drawobj failure */
+	if (cmdobj == NULL) {
+		adreno_fault_header(device, rb, NULL, fault);
+		kgsl_device_snapshot(device, NULL, fault & ADRENO_GMU_FAULT);
+		return;
+	}
+
+	/* Skip everything if the PMDUMP flag is set */
+	if (test_bit(KGSL_FT_SKIP_PMDUMP, &cmdobj->fault_policy))
+		return;
+
+	/* Print the fault header */
+	adreno_fault_header(device, rb, cmdobj, fault);
+
+	if (!(drawobj->context->flags & KGSL_CONTEXT_NO_SNAPSHOT))
+		kgsl_device_snapshot(device, drawobj->context,
+					fault & ADRENO_GMU_FAULT);
+}
+
 static int dispatcher_do_fault(struct adreno_device *adreno_dev)
 {
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
@@ -2199,6 +2222,8 @@ static int dispatcher_do_fault(struct adreno_device *adreno_dev)
 		adreno_readreg64(adreno_dev, ADRENO_REG_CP_IB1_BASE,
 			ADRENO_REG_CP_IB1_BASE_HI, &base);
 
+	do_header_and_snapshot(device, fault, hung_rb, cmdobj);
+
 	/* Turn off the KEEPALIVE vote from the ISR for hard fault */
 	if (gpudev->gpu_keepalive && fault & ADRENO_HARD_FAULT)
 		gpudev->gpu_keepalive(adreno_dev, false);
@@ -2266,7 +2291,6 @@ static inline int drawobj_consumed(struct kgsl_drawobj *drawobj,
 		(timestamp_cmp(retired, drawobj->timestamp) < 0));
 }
 
-void __weak kgsl_cmdbatch_retired_hook(void) { }
 static void _print_recovery(struct kgsl_device *device,
 		struct kgsl_drawobj_cmd *cmdobj)
 {
@@ -2343,7 +2367,6 @@ static void retire_cmdobj(struct adreno_device *adreno_dev,
 
 	drawctxt->ticks_index = (drawctxt->ticks_index + 1) %
 		SUBMIT_RETIRE_TICKS_SIZE;
-	kgsl_cmdbatch_retired_hook();
 
 	kgsl_drawobj_destroy(drawobj);
 }

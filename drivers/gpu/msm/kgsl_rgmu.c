@@ -250,6 +250,36 @@ static int rgmu_enable_gdsc(struct rgmu_device *rgmu)
 	return ret;
 }
 
+static void rgmu_snapshot(struct kgsl_device *device)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct gmu_dev_ops *gmu_dev_ops = GMU_DEVICE_OPS(device);
+	struct rgmu_device *rgmu = KGSL_RGMU_DEVICE(device);
+
+	/* Mask so there's no interrupt caused by NMI */
+	adreno_write_gmureg(adreno_dev,
+			ADRENO_REG_GMU_GMU2HOST_INTR_MASK, 0xFFFFFFFF);
+
+	/* Make sure the interrupt is masked */
+	wmb();
+
+	/*
+	 * Halt RGMU execution so that GX will not
+	 * be collapsed while dumping snapshot.
+	 */
+	gmu_dev_ops->halt_execution(device);
+
+	kgsl_device_snapshot(device, NULL, true);
+
+	adreno_write_gmureg(adreno_dev,
+			ADRENO_REG_GMU_GMU2HOST_INTR_CLR, 0xFFFFFFFF);
+	adreno_write_gmureg(adreno_dev,
+			ADRENO_REG_GMU_GMU2HOST_INTR_MASK,
+			~(gmu_dev_ops->gmu2host_intr_mask));
+
+	rgmu->fault_count++;
+}
+
 /* Caller shall ensure GPU is ready for SLUMBER */
 static void rgmu_stop(struct kgsl_device *device)
 {
@@ -279,6 +309,7 @@ error:
 	 * that hang recovery is needed to power on GPU
 	 */
 	set_bit(GMU_FAULT, &device->gmu_core.flags);
+	rgmu_snapshot(device);
 }
 static void rgmu_remove(struct kgsl_device *device)
 {
@@ -426,6 +457,7 @@ static int rgmu_start(struct kgsl_device *device)
 
 error_rgmu:
 	set_bit(GMU_FAULT, &device->gmu_core.flags);
+	rgmu_snapshot(device);
 	return ret;
 }
 
@@ -464,6 +496,7 @@ struct gmu_core_ops rgmu_ops = {
 	.start = rgmu_start,
 	.stop = rgmu_stop,
 	.dcvs_set = rgmu_dcvs_set,
+	.snapshot = rgmu_snapshot,
 	.regulator_isenabled = rgmu_regulator_isenabled,
 	.suspend = rgmu_suspend,
 };

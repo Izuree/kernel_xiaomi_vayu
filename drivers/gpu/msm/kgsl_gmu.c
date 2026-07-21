@@ -83,6 +83,7 @@ static struct gmu_memdesc gmu_kmem_entries[GMU_KERNEL_ENTRIES];
 static unsigned long gmu_kmem_bitmap;
 static unsigned int num_uncached_entries;
 
+static void gmu_snapshot(struct kgsl_device *device);
 static void gmu_remove(struct kgsl_device *device);
 
 unsigned int gmu_get_memtype_base(struct gmu_device *gmu,
@@ -577,6 +578,7 @@ static int gmu_dcvs_set(struct kgsl_device *device,
 		dev_err_ratelimited(&gmu->pdev->dev,
 			"Failed to set GPU perf idx %d, bw idx %d\n",
 			req.freq, req.bw);
+		gmu_snapshot(device);
 	}
 
 	/* indicate actual clock change */
@@ -1281,34 +1283,6 @@ static void gmu_aop_send_acd_state(struct kgsl_device *device)
 	mailbox->enabled = state;
 }
 
-/*
- * Force ACD off in AOP regardless of the ctrl bit. Used before GMU power
- * collapse so AOP does not apply ACD during shutdown. mailbox->enabled is
- * set to false so gmu_aop_send_acd_state() will re-send on next boot.
- */
-static void gmu_aop_send_acd_disable(struct kgsl_device *device)
-{
-	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
-	struct kgsl_mailbox *mailbox = &gmu->mailbox;
-	struct mbox_message msg;
-	char msg_buf[33];
-	int ret;
-
-	if (!mailbox->client || !mailbox->enabled)
-		return;
-
-	msg.len = scnprintf(msg_buf, sizeof(msg_buf),
-			"{class: gpu, res: acd, value: 0}");
-	msg.msg = msg_buf;
-
-	ret = mbox_send_message(mailbox->channel, &msg);
-	if (ret < 0)
-		dev_err(&gmu->pdev->dev,
-				"AOP mbox send message failed: %d\n", ret);
-	else
-		mailbox->enabled = false;
-}
-
 static void gmu_aop_mailbox_destroy(struct kgsl_device *device)
 {
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
@@ -1617,9 +1591,6 @@ static int gmu_suspend(struct kgsl_device *device)
 	gmu_dev_ops->irq_disable(device);
 	hfi_stop(gmu);
 
-	/* Disable ACD in AOP before suspend */
-	gmu_aop_send_acd_disable(device);
-
 	if (gmu_dev_ops->rpmh_gpu_pwrctrl(adreno_dev, GMU_SUSPEND, 0, 0))
 		return -EINVAL;
 
@@ -1637,6 +1608,26 @@ static int gmu_suspend(struct kgsl_device *device)
 	return 0;
 }
 
+static void gmu_snapshot(struct kgsl_device *device)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct gmu_dev_ops *gmu_dev_ops = GMU_DEVICE_OPS(device);
+	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
+
+	send_nmi_to_gmu(adreno_dev);
+	/* Wait for the NMI to be handled */
+	udelay(100);
+	kgsl_device_snapshot(device, NULL, true);
+
+	adreno_write_gmureg(adreno_dev,
+			ADRENO_REG_GMU_GMU2HOST_INTR_CLR, 0xFFFFFFFF);
+	adreno_write_gmureg(adreno_dev,
+			ADRENO_REG_GMU_GMU2HOST_INTR_MASK,
+			~(gmu_dev_ops->gmu2host_intr_mask));
+
+	gmu->fault_count++;
+}
+
 /* To be called to power on both GPU and GMU */
 static int gmu_start(struct kgsl_device *device)
 {
@@ -1650,6 +1641,8 @@ static int gmu_start(struct kgsl_device *device)
 	case KGSL_STATE_INIT:
 	case KGSL_STATE_SUSPEND:
 		WARN_ON(test_bit(GMU_CLK_ON, &device->gmu_core.flags));
+
+		gmu_aop_send_acd_state(device);
 
 		gmu_enable_gdsc(gmu);
 		gmu_enable_clks(device);
@@ -1671,9 +1664,6 @@ static int gmu_start(struct kgsl_device *device)
 		if (ret)
 			goto error_gmu;
 
-		/* Enable ACD in AOP after GMU/HFI are fully up */
-		gmu_aop_send_acd_state(device);
-
 		/* Request default DCVS level */
 		kgsl_pwrctrl_set_default_gpu_pwrlevel(device);
 		msm_bus_scale_client_update_request(gmu->pcl, 0);
@@ -1681,6 +1671,8 @@ static int gmu_start(struct kgsl_device *device)
 
 	case KGSL_STATE_SLUMBER:
 		WARN_ON(test_bit(GMU_CLK_ON, &device->gmu_core.flags));
+
+		gmu_aop_send_acd_state(device);
 
 		gmu_enable_gdsc(gmu);
 		gmu_enable_clks(device);
@@ -1695,14 +1687,13 @@ static int gmu_start(struct kgsl_device *device)
 		if (ret)
 			goto error_gmu;
 
-		/* Enable ACD in AOP after GMU/HFI are fully up */
-		gmu_aop_send_acd_state(device);
-
 		kgsl_pwrctrl_set_default_gpu_pwrlevel(device);
 		break;
 
 	case KGSL_STATE_RESET:
 		gmu_suspend(device);
+
+		gmu_aop_send_acd_state(device);
 
 		gmu_enable_gdsc(gmu);
 		gmu_enable_clks(device);
@@ -1717,9 +1708,6 @@ static int gmu_start(struct kgsl_device *device)
 		ret = hfi_start(device, gmu, GMU_COLD_BOOT);
 		if (ret)
 			goto error_gmu;
-
-		/* Enable ACD in AOP after GMU/HFI are fully up */
-		gmu_aop_send_acd_state(device);
 
 		/* Send DCVS level prior to reset*/
 		kgsl_pwrctrl_set_default_gpu_pwrlevel(device);
@@ -1752,9 +1740,6 @@ static void gmu_stop(struct kgsl_device *device)
 	if (gmu_dev_ops->wait_for_lowest_idle &&
 			gmu_dev_ops->wait_for_lowest_idle(adreno_dev))
 		goto error;
-
-	/* Disable ACD in AOP before power collapse */
-	gmu_aop_send_acd_disable(device);
 
 	ret = gmu_dev_ops->rpmh_gpu_pwrctrl(adreno_dev,
 			GMU_NOTIFY_SLUMBER, 0, 0);
@@ -1892,6 +1877,7 @@ struct gmu_core_ops gmu_ops = {
 	.start = gmu_start,
 	.stop = gmu_stop,
 	.dcvs_set = gmu_dcvs_set,
+	.snapshot = gmu_snapshot,
 	.regulator_isenabled = gmu_regulator_isenabled,
 	.suspend = gmu_suspend,
 	.acd_set = gmu_acd_set,
