@@ -3467,7 +3467,8 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 			wake_up_all(&pgdat->pfmemalloc_wait);
 
 		/* Check if kswapd should be suspending */
-		if (try_to_freeze() || kthread_should_stop())
+		if (try_to_freeze() || kthread_should_stop() ||
+		    !atomic_long_read(&kswapd_waiters))
 			break;
 
 		/*
@@ -3691,7 +3692,8 @@ kswapd_try_sleep:
 /*
  * A zone is low on free memory, so wake its kswapd task to service it.
  */
-void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
+void wakeup_kswapd(struct zone *zone, gfp_t gfp_flags, int order,
+		   enum zone_type classzone_idx)
 {
 	pg_data_t *pgdat;
 	enum zone_type curr_idx;
@@ -3699,7 +3701,7 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 	if (!managed_zone(zone))
 		return;
 
-	if (!cpuset_zone_allowed(zone, GFP_KERNEL | __GFP_HARDWALL))
+	if (!cpuset_zone_allowed(zone, gfp_flags))
 		return;
 
 	pgdat = zone->zone_pgdat;

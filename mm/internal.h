@@ -167,6 +167,7 @@ extern void prep_compound_page(struct page *page, unsigned int order);
 extern void post_alloc_hook(struct page *page, unsigned int order,
 					gfp_t gfp_flags);
 extern int user_min_free_kbytes;
+extern atomic_long_t kswapd_waiters;
 
 #if defined CONFIG_COMPACTION || defined CONFIG_CMA
 
@@ -530,6 +531,7 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 #define ALLOC_HIGH		0x20 /* __GFP_HIGH set */
 #define ALLOC_CPUSET		0x40 /* check for correct cpuset */
 #define ALLOC_CMA		0x80 /* allow allocations from CMA areas */
+#define ALLOC_KSWAPD		0x200 /* allow waking of kswapd */
 
 enum ttu_flags;
 struct tlbflush_unmap_batch;

@@ -131,6 +131,9 @@ unsigned long totalram_pages __read_mostly;
 unsigned long totalreserve_pages __read_mostly;
 unsigned long totalcma_pages __read_mostly;
 
+/* kswapd_waiters counts tasks in __alloc_pages_slowpath that are waking kswapd */
+atomic_long_t kswapd_waiters = ATOMIC_LONG_INIT(0);
+
 int percpu_pagelist_fraction;
 gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
 #ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
@@ -3825,7 +3828,8 @@ retry:
 	return page;
 }
 
-static void wake_all_kswapds(unsigned int order, const struct alloc_context *ac)
+static void wake_all_kswapds(unsigned int order, gfp_t gfp_mask,
+			     const struct alloc_context *ac)
 {
 	struct zoneref *z;
 	struct zone *zone;
@@ -3834,7 +3838,7 @@ static void wake_all_kswapds(unsigned int order, const struct alloc_context *ac)
 	for_each_zone_zonelist_nodemask(zone, z, ac->zonelist,
 					ac->high_zoneidx, ac->nodemask) {
 		if (last_pgdat != zone->zone_pgdat)
-			wakeup_kswapd(zone, order, ac->high_zoneidx);
+			wakeup_kswapd(zone, gfp_mask, order, ac->high_zoneidx);
 		last_pgdat = zone->zone_pgdat;
 	}
 }
@@ -3875,6 +3879,10 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 				(gfp_mask & __GFP_CMA))
 		alloc_flags |= ALLOC_CMA;
 #endif
+
+	if (gfp_mask & __GFP_KSWAPD_RECLAIM)
+		alloc_flags |= ALLOC_KSWAPD;
+
 	return alloc_flags;
 }
 
@@ -4071,6 +4079,7 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	unsigned int cpuset_mems_cookie;
 	unsigned int zonelist_iter_cookie;
 	int reserve_flags;
+	bool woke_kswapd = false;
 	bool used_vmpressure = false;
 
 	/*
@@ -4106,8 +4115,15 @@ restart:
 	if (!ac->preferred_zoneref->zone)
 		goto nopage;
 
-	if (gfp_mask & __GFP_KSWAPD_RECLAIM)
-		wake_all_kswapds(order, ac);
+	if (alloc_flags & ALLOC_KSWAPD) {
+		if (!woke_kswapd) {
+			atomic_long_inc(&kswapd_waiters);
+			woke_kswapd = true;
+		}
+		if (!used_vmpressure)
+			used_vmpressure = vmpressure_inc_users(order);
+		wake_all_kswapds(order, gfp_mask, ac);
+	}
 
 	/*
 	 * The adjusted alloc_flags might result in immediate success, so try
@@ -4164,8 +4180,8 @@ restart:
 
 retry:
 	/* Ensure kswapd doesn't accidentally go to sleep as long as we loop */
-	if (gfp_mask & __GFP_KSWAPD_RECLAIM)
-		wake_all_kswapds(order, ac);
+	if (alloc_flags & ALLOC_KSWAPD)
+		wake_all_kswapds(order, gfp_mask, ac);
 
 	reserve_flags = __gfp_pfmemalloc_flags(gfp_mask);
 	if (reserve_flags)
@@ -4319,6 +4335,8 @@ fail:
 	warn_alloc(gfp_mask, ac->nodemask,
 			"page allocation failure: order:%u", order);
 got_pg:
+	if (woke_kswapd)
+		atomic_long_dec(&kswapd_waiters);
 	if (used_vmpressure)
 		vmpressure_dec_users();
 	return page;
