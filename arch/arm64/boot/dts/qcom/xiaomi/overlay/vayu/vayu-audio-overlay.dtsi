@@ -14,6 +14,14 @@
 
 #include "../common/sm8150-audio-overlay.dtsi"
 
+&tdm_sen_rx {
+	status = "disabled";
+};
+
+&tdm_sen_tx {
+	status = "disabled";
+};
+
 &snd_934x {
 	qcom,audio-routing =
 		"AIF4 VI", "MCLK",
