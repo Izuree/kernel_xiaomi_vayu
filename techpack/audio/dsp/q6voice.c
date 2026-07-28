@@ -24,6 +24,9 @@
 #include "adsp_err.h"
 #include <dsp/voice_mhi.h>
 
+#undef pr_err
+#define pr_err pr_debug
+
 #if defined(CONFIG_MACH_XIAOMI_VAYU) || defined(CONFIG_MACH_XIAOMI_NABU)
 #define TIMEOUT_MS 1000
 #else

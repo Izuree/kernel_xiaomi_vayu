@@ -33,6 +33,9 @@
 #include <dsp/msm-cirrus-playback-v2.h>
 #endif
 
+#undef pr_err
+#define pr_err pr_debug
+
 #define TIMEOUT_MS 1000
 
 #define RESET_COPP_ID 99

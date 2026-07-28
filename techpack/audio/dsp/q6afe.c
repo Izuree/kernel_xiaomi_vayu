@@ -60,6 +60,9 @@ static int32_t tas_smartamp_algo_callback(uint32_t *payload,
 static int err_count = 0;
 #endif
 
+#undef pr_err
+#define pr_err pr_debug
+
 #define WAKELOCK_TIMEOUT	5000
 enum {
 	AFE_COMMON_RX_CAL = 0,
