@@ -66,7 +66,7 @@ static struct msm_bus_scale_pdata *get_pdata(struct device *dev,
 	ret = of_property_read_string(of_node, "qcom,msm-bus,name",
 		&pdata->name);
 	if (ret) {
-		pr_err("Error: Client name not found\n");
+		pr_debug("Error: Client name not found\n");
 		goto err;
 	}
 

@@ -47,6 +47,9 @@
 #include <linux/pm_runtime.h>
 #include <linux/ipc_logging.h>
 
+#undef pr_err
+#define pr_err pr_debug
+
 #define DRIVER_VERSION		"22-Aug-2005"
 
 /*-------------------------------------------------------------------------*/

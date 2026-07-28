@@ -20,6 +20,9 @@
 #include "npu_hw_access.h"
 #include "npu_common.h"
 
+#undef pr_err
+#define pr_err pr_debug
+
 /* -------------------------------------------------------------------------
  * Function Prototypes
  * -------------------------------------------------------------------------
