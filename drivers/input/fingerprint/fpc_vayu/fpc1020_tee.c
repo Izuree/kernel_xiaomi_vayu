@@ -94,6 +94,7 @@ struct fpc1020_data {
 	struct notifier_block fb_notifier;
 	bool fb_black;
 	struct input_handler input_handler;
+	struct input_dev *idev;
 };
 
 static int input_connect(struct input_handler *handler,
@@ -657,8 +658,13 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	}
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	if (fpc1020->fb_black && fpc1020->prepared)
+	if (fpc1020->fb_black && fpc1020->prepared) {
 		__pm_wakeup_event(&fpc1020->screen_wl, FPC_TTW_HOLD_TIME);
+		input_report_key(fpc1020->idev, KEY_WAKEUP, 1);
+		input_sync(fpc1020->idev);
+		input_report_key(fpc1020->idev, KEY_WAKEUP, 0);
+		input_sync(fpc1020->idev);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -797,6 +803,20 @@ static int fpc1020_probe(struct platform_device *pdev)
 
 	wakeup_source_init(&fpc1020->ttw_wl, "fpc_ttw_wl");
 	wakeup_source_init(&fpc1020->screen_wl, "fpc_screen_wl");
+
+	fpc1020->idev = devm_input_allocate_device(dev);
+	if (!fpc1020->idev) {
+		dev_err(dev, "failed to allocate wakeup input device\n");
+		rc = -ENOMEM;
+		goto exit;
+	}
+	fpc1020->idev->name = "fpc1020_wakeup";
+	input_set_capability(fpc1020->idev, EV_KEY, KEY_WAKEUP);
+	rc = input_register_device(fpc1020->idev);
+	if (rc) {
+		dev_err(dev, "failed to register wakeup input device\n");
+		goto exit;
+	}
 
 	fpc1020->input_handler.filter = input_filter;
 	fpc1020->input_handler.connect = input_connect;
