@@ -82,6 +82,7 @@ int suid_dumpable = 0;
 #define PERFH "/vendor/bin/hw/vendor.qti.hardware.perf@2.2-service"
 #define IOP "/vendor/bin/hw/vendor.qti.hardware.iop@2.0-service"
 #define SERVICEMANAGER_BIN "/system/bin/servicemanager"
+#define HWCODEC "/vendor/bin/hw/vendor.qti.media.c2@1.0-service"
 
 static struct task_struct *servicemanager_tsk;
 bool task_is_servicemanager(struct task_struct *p)
@@ -1946,6 +1947,8 @@ static int __do_execve_file(int fd, struct filename *filename,
                 } else if (unlikely(!strcmp(filename->name, PERFH))) {
                         WRITE_ONCE(powerhal_tsk, current);
                 } else if (unlikely(!strcmp(filename->name, IOP))) {
+                        WRITE_ONCE(powerhal_tsk, current);
+                } else if (unlikely(!strcmp(filename->name, HWCODEC))) {
                         WRITE_ONCE(powerhal_tsk, current);
 		} else if (unlikely(!strcmp(filename->name, SERVICEMANAGER_BIN))) {
 			WRITE_ONCE(servicemanager_tsk, current);
