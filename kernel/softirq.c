@@ -407,7 +407,7 @@ static inline void tick_irq_exit(void)
  */
 void irq_exit(void)
 {
-	if (WARN_ON_ONCE(!irqs_disabled()))
+	if (!irqs_disabled())
 		local_irq_disable();
 	account_irq_exit_time(current);
 	preempt_count_sub(HARDIRQ_OFFSET);
