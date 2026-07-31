@@ -218,6 +218,7 @@ static int bpf_trampoline_update(struct bpf_trampoline *tr)
 	 * Wait for these two grace periods together.
 	 */
 	synchronize_rcu_tasks();
+	synchronize_rcu_tasks_trace();
 
 	err = arch_prepare_bpf_trampoline(new_image, new_image + PAGE_SIZE / 2,
 					  &tr->func.model, flags, tprogs,
