@@ -100,7 +100,7 @@ static ssize_t store_##name(struct device *dev,				\
 	int ret;							\
 	unsigned int val;						\
 	if (hw->locked)							\
-		return -EPERM;						\
+		return count;						\
 	ret = kstrtoint(buf, 10, &val);					\
 	if (ret)							\
 		return ret;						\
@@ -140,7 +140,7 @@ static ssize_t store_list_##name(struct device *dev,			\
 	unsigned int i = 0, val;					\
 	char **strlist;							\
 	if (hw->locked)							\
-		return -EPERM;						\
+		return count;						\
 									\
 	strlist = argv_split(GFP_KERNEL, buf, &numvals);		\
 	if (!strlist)							\
@@ -784,7 +784,7 @@ static ssize_t sample_ms_store(struct device *dev,
 	unsigned int val;
 
 	if (hw->locked)
-		return -EPERM;
+		return count;
 
 	ret = kstrtoint(buf, 10, &val);
 	if (ret)

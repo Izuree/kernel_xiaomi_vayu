@@ -76,7 +76,7 @@ static ssize_t store_##name(struct device *dev,				\
 	int ret;							\
 	unsigned int val;						\
 	if (hw->locked)							\
-		return -EPERM;						\
+		return count;						\
 	ret = kstrtouint(buf, 10, &val);				\
 	if (ret)							\
 		return ret;						\
