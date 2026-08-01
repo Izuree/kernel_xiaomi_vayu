@@ -25,7 +25,6 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 
-
 const struct file_operations generic_ro_fops = {
 	.llseek		= generic_file_llseek,
 	.read_iter	= generic_file_read_iter,
@@ -568,16 +567,9 @@ static inline void file_pos_write(struct file *file, loff_t pos)
 	if ((file->f_mode & FMODE_STREAM) == 0)
 		file->f_pos = pos;
 }
-#ifdef CONFIG_KSU
-extern bool ksu_vfs_read_hook __read_mostly;
-extern int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr, size_t *count_ptr);
-#endif
+
 SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 {
-#ifdef CONFIG_KSU
-	if (unlikely(ksu_vfs_read_hook))
-		ksu_handle_sys_read(fd, &buf, &count);
-#endif
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
 
