@@ -41,7 +41,6 @@
 
 #include "a3xx_reg.h"
 #include "a6xx_reg.h"
-#include "adreno_snapshot.h"
 
 /* Include the master list of GPU cores that are supported */
 #include "adreno-gpulist.h"
@@ -1850,16 +1849,6 @@ int adreno_set_unsecured_mode(struct adreno_device *adreno_dev,
 {
 	int ret = 0;
 
-	if (!adreno_is_a5xx(adreno_dev) && !adreno_is_a6xx(adreno_dev))
-		return -EINVAL;
-
-	if (ADRENO_QUIRK(adreno_dev, ADRENO_QUIRK_CRITICAL_PACKETS) &&
-			adreno_is_a5xx(adreno_dev)) {
-		ret = a5xx_critical_packet_submit(adreno_dev, rb);
-		if (ret)
-			return ret;
-	}
-
 	/* GPU comes up in secured mode, make it unsecured by default */
 	if (adreno_dev->zap_handle_ptr)
 		ret = adreno_switch_to_unsecure_mode(adreno_dev, rb);
@@ -2144,12 +2133,8 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 		goto error_oob_clear;
 
 	/*
-	 * At this point it is safe to assume that we recovered. Setting
-	 * this field allows us to take a new snapshot for the next failure
-	 * if we are prioritizing the first unrecoverable snapshot.
+	 * At this point it is safe to assume that we recovered.
 	 */
-	if (device->snapshot)
-		device->snapshot->recovered = true;
 
 	/* Start the dispatcher */
 	adreno_dispatcher_start(device);
@@ -2251,7 +2236,6 @@ static int adreno_stop(struct kgsl_device *device)
 			if (gmu_core_regulator_isenabled(device)) {
 				/* GPU is on. Try recovery */
 				set_bit(GMU_FAULT, &device->gmu_core.flags);
-				gmu_core_snapshot(device);
 				error = -EINVAL;
 			} else {
 				return error;
@@ -2294,7 +2278,6 @@ static int adreno_stop(struct kgsl_device *device)
 			gmu_dev_ops->wait_for_lowest_idle(adreno_dev)) {
 
 		set_bit(GMU_FAULT, &device->gmu_core.flags);
-		gmu_core_snapshot(device);
 		/*
 		 * Assume GMU hang after 10ms without responding.
 		 * It shall be relative safe to clear vbif and stop
@@ -3214,8 +3197,6 @@ void adreno_spin_idle_debug(struct adreno_device *adreno_dev,
 		adreno_dev->cur_rb->id, rptr, wptr, status, status3, intstatus);
 
 	dev_err(device->dev, " hwfault=%8.8X\n", hwfault);
-
-	kgsl_device_snapshot(device, NULL, adreno_gmu_gpu_fault(adreno_dev));
 }
 
 /**
@@ -4176,7 +4157,6 @@ static const struct kgsl_functable adreno_functable = {
 	.compat_ioctl = adreno_compat_ioctl,
 	.power_stats = adreno_power_stats,
 	.gpuid = adreno_gpuid,
-	.snapshot = adreno_snapshot,
 	.irq_handler = adreno_irq_handler,
 	.drain = adreno_drain,
 	.device_private_create = adreno_device_private_create,

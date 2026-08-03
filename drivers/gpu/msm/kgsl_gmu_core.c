@@ -149,14 +149,6 @@ int gmu_core_suspend(struct kgsl_device *device)
 	return -EINVAL;
 }
 
-void gmu_core_snapshot(struct kgsl_device *device)
-{
-	struct gmu_core_ops *gmu_core_ops = GMU_CORE_OPS(device);
-
-	if (gmu_core_ops && gmu_core_ops->snapshot)
-		gmu_core_ops->snapshot(device);
-}
-
 int gmu_core_dcvs_set(struct kgsl_device *device, unsigned int gpu_pwrlevel,
 		unsigned int bus_level)
 {

@@ -2923,8 +2923,6 @@ _aware(struct kgsl_device *device)
 				 * GPU will not be powered on
 				 */
 				WARN_ONCE(1, "Failed to recover GMU\n");
-				if (device->snapshot)
-					device->snapshot->recovered = false;
 				/*
 				 * On recovery failure, we are clearing
 				 * GMU_FAULT bit and also not keeping
@@ -2946,8 +2944,6 @@ _aware(struct kgsl_device *device)
 				gmu_core_suspend(device);
 				kgsl_pwrctrl_set_state(device, state);
 			} else {
-				if (device->snapshot)
-					device->snapshot->recovered = true;
 				kgsl_pwrctrl_set_state(device,
 					KGSL_STATE_AWARE);
 			}

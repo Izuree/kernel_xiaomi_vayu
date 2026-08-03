@@ -136,7 +136,6 @@ struct gmu_core_ops {
 			unsigned int gpu_pwrlevel, unsigned int bus_level);
 	int (*start)(struct kgsl_device *device);
 	void (*stop)(struct kgsl_device *device);
-	void (*snapshot)(struct kgsl_device *device);
 	bool (*regulator_isenabled)(struct kgsl_device *device);
 	int (*suspend)(struct kgsl_device *device);
 	int (*acd_set)(struct kgsl_device *device, unsigned int val);
@@ -163,7 +162,6 @@ struct gmu_dev_ops {
 	int (*ifpc_store)(struct adreno_device *adreno_dev,
 			unsigned int val);
 	unsigned int (*ifpc_show)(struct adreno_device *adreno_dev);
-	void (*snapshot)(struct adreno_device *, struct kgsl_snapshot *);
 	bool (*cx_is_on)(struct kgsl_device *device);
 	void (*halt_execution)(struct kgsl_device *device);
 	int (*wait_for_active_transition)(struct adreno_device *adreno_dev);
@@ -205,7 +203,6 @@ void gmu_core_remove(struct kgsl_device *device);
 int gmu_core_start(struct kgsl_device *device);
 void gmu_core_stop(struct kgsl_device *device);
 int gmu_core_suspend(struct kgsl_device *device);
-void gmu_core_snapshot(struct kgsl_device *device);
 bool gmu_core_gpmu_isenabled(struct kgsl_device *device);
 bool gmu_core_scales_bandwidth(struct kgsl_device *device);
 bool gmu_core_isenabled(struct kgsl_device *device);
