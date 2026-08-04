@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
 #include "sched.h"
-#include "walt.h"
 
 /*
  * stop-task scheduling class.
@@ -154,7 +153,4 @@ const struct sched_class stop_sched_class = {
 	.prio_changed		= prio_changed_stop,
 	.switched_to		= switched_to_stop,
 	.update_curr		= update_curr_stop,
-#ifdef CONFIG_SCHED_WALT
-	.fixup_walt_sched_stats	= fixup_walt_sched_stats_common,
-#endif
 };
