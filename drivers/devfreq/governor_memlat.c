@@ -39,7 +39,6 @@ struct memlat_node {
 	unsigned int stall_floor;
 	unsigned int wb_pct_thres;
 	unsigned int wb_filter_ratio;
-	bool locked;
 	bool mon_started;
 	bool already_zero;
 	struct list_head list;
@@ -75,8 +74,6 @@ static ssize_t store_##name(struct device *dev,				\
 	struct memlat_node *hw = df->data;				\
 	int ret;							\
 	unsigned int val;						\
-	if (hw->locked)							\
-		return count;						\
 	ret = kstrtouint(buf, 10, &val);				\
 	if (ret)							\
 		return ret;						\
@@ -212,7 +209,6 @@ static int gov_start(struct devfreq *df)
 	if (ret)
 		goto err_sysfs;
 
-	df->governor_locked = true;
 	return 0;
 
 err_sysfs:
@@ -262,7 +258,6 @@ static void gov_stop(struct devfreq *df)
 	struct memlat_node *node = df->data;
 	struct memlat_hwmon *hw = node->hw;
 
-	df->governor_locked = false;
 	sysfs_remove_group(&df->dev.kobj, node->attr_grp);
 	stop_monitor(df);
 	df->data = node->orig_data;
@@ -574,16 +569,6 @@ int register_memlat(struct device *dev, struct memlat_hwmon *hw)
 		ret = PTR_ERR(node);
 		goto out;
 	}
-
-	if (hw->of_node) {
-		if (of_node_name_eq(hw->of_node, "qcom,cpu7-cpu-l3-lat"))
-			node->ratio_ceil = 20000;
-		else if (of_node_name_eq(hw->of_node, "qcom,cpu4-cpu-l3-lat"))
-			node->ratio_ceil = 4000;
-		else
-			node->ratio_ceil = 400;
-	}
-	node->locked = true;
 
 	mutex_lock(&state_lock);
 	node->gov = &devfreq_gov_memlat;

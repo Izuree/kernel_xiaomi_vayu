@@ -62,7 +62,6 @@ struct hwmon_node {
 	bool sampled;
 	bool mon_started;
 	bool init_pending;
-	bool locked;
 	struct list_head list;
 	void *orig_data;
 	struct bw_hwmon *hw;
@@ -99,8 +98,6 @@ static ssize_t store_##name(struct device *dev,				\
 	struct hwmon_node *hw = df->data;				\
 	int ret;							\
 	unsigned int val;						\
-	if (hw->locked)							\
-		return count;						\
 	ret = kstrtoint(buf, 10, &val);					\
 	if (ret)							\
 		return ret;						\
@@ -139,8 +136,6 @@ static ssize_t store_list_##name(struct device *dev,			\
 	int ret, numvals;						\
 	unsigned int i = 0, val;					\
 	char **strlist;							\
-	if (hw->locked)							\
-		return count;						\
 									\
 	strlist = argv_split(GFP_KERNEL, buf, &numvals);		\
 	if (!strlist)							\
@@ -783,9 +778,6 @@ static ssize_t sample_ms_store(struct device *dev,
 	int ret;
 	unsigned int val;
 
-	if (hw->locked)
-		return count;
-
 	ret = kstrtoint(buf, 10, &val);
 	if (ret)
 		return ret;
@@ -871,13 +863,11 @@ static int devfreq_bw_hwmon_ev_handler(struct devfreq *df,
 		if (ret)
 			goto out;
 
-		df->governor_locked = true;
 		dev_dbg(df->dev.parent,
 			"Enabled dev BW HW monitor governor\n");
 		break;
 
 	case DEVFREQ_GOV_STOP:
-		df->governor_locked = false;
 		gov_stop(df);
 		dev_dbg(df->dev.parent,
 			"Disabled dev BW HW monitor governor\n");
@@ -986,52 +976,21 @@ int register_bw_hwmon(struct device *dev, struct bw_hwmon *hwmon)
 		node->attr_grp = &dev_attr_group;
 	}
 
-	/*
-	 * Tuned and locked defaults for SM8150 CPU BW nodes.
-	 * Userspace writes to sysfs are blocked via node->locked.
-	 */
-	if (hwmon->of_node &&
-	    of_node_name_eq(hwmon->of_node, "qcom,cpu-llcc-ddr-bw")) {
-		node->io_percent = 80;
-		node->idle_mbps = 1600;
-		node->mbps_zones[0] = 1720;
-		node->mbps_zones[1] = 2929;
-		node->mbps_zones[2] = 3879;
-		node->mbps_zones[3] = 5931;
-		node->mbps_zones[4] = 6881;
-		node->mbps_zones[5] = 7980;
-		node->mbps_zones[6] = 0;
-		node->locked = true;
-	} else if (hwmon->of_node &&
-		   of_node_name_eq(hwmon->of_node, "qcom,cpu-cpu-llcc-bw")) {
-		node->io_percent = 50;
-		node->idle_mbps = 1600;
-		node->mbps_zones[0] = 2288;
-		node->mbps_zones[1] = 4577;
-		node->mbps_zones[2] = 7110;
-		node->mbps_zones[3] = 9155;
-		node->mbps_zones[4] = 12298;
-		node->mbps_zones[5] = 14236;
-		node->mbps_zones[6] = 15258;
-		node->mbps_zones[7] = 0;
-		node->locked = true;
-	} else {
-		node->io_percent = 16;
-		node->idle_mbps = 400;
-		node->mbps_zones[0] = 0;
-	}
-	node->guard_band_mbps = 0;
+	node->guard_band_mbps = 100;
 	node->decay_rate = 90;
+	node->io_percent = 16;
 	node->bw_step = 190;
-	node->sample_ms = 10;
-	node->up_scale = 250;
+	node->sample_ms = 50;
+	node->up_scale = 0;
 	node->up_thres = 10;
-	node->down_thres = 30;
+	node->down_thres = 0;
 	node->down_count = 3;
-	node->hist_memory = 20;
+	node->hist_memory = 0;
 	node->hyst_trigger_count = 3;
-	node->hyst_length = 10;
+	node->hyst_length = 0;
+	node->idle_mbps = 400;
 	node->use_ab = 1;
+	node->mbps_zones[0] = 0;
 	node->hw = hwmon;
 
 	mutex_init(&node->mon_lock);

@@ -171,10 +171,7 @@ static irqreturn_t msmcci_hwmon_shared_intr_handler(int irq, void *dev)
 	if (idx == -1)
 		return IRQ_NONE;
 
-	mutex_lock(&m->update_lock);
-	if (mon_is_match_flag_set(m, idx))
-		update_cache_hwmon(&m->hw);
-	mutex_unlock(&m->update_lock);
+	update_cache_hwmon(&m->hw);
 
 	return IRQ_HANDLED;
 }
@@ -397,7 +394,7 @@ static int register_pm_notifier(struct msmcci_hwmon *m)
 	return 0;
 }
 
-static void unregister_pm_notifier(void)
+static void unregister_pm_nofitifier(void)
 {
 	mutex_lock(&notifier_reg_lock);
 	use_cnt--;
@@ -462,7 +459,7 @@ static int start_hwmon(struct cache_hwmon *hw, struct mrps_stats *mrps)
 		ret = request_interrupts(m);
 
 	if (ret) {
-		unregister_pm_notifier();
+		unregister_pm_nofitifier();
 		return ret;
 	}
 	mon_init(m);
@@ -494,7 +491,7 @@ static void stop_hwmon(struct cache_hwmon *hw)
 		mon_clear_single(m, i);
 	}
 
-	unregister_pm_notifier();
+	unregister_pm_nofitifier();
 }
 
 static int msmcci_hwmon_parse_dt(struct platform_device *pdev,
