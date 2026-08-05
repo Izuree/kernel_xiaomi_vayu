@@ -1053,6 +1053,9 @@ static ssize_t online_store(struct device *dev, struct device_attribute *attr,
 	bool val;
 	int ret;
 
+	if (from_kuid_munged(current_user_ns(), current_uid()) == 1000)
+		return -EPERM;
+
 	ret = strtobool(buf, &val);
 	if (ret < 0)
 		return ret;
