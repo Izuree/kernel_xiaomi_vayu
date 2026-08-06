@@ -2397,7 +2397,6 @@ endif # MODULES
 config MODULES_TREE_LOOKUP
 	def_bool y
 	depends on PERF_EVENTS || TRACING || CFI_CLANG
-	select MODULE_REL_CRCS
 
 config INIT_ALL_POSSIBLE
 	bool
