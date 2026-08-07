@@ -36,6 +36,16 @@ static inline struct dax_device *dax_get_by_host(const char *host)
 static inline void put_dax(struct dax_device *dax_dev)
 {
 }
+static inline void kill_dax(struct dax_device *dax_dev)
+{
+}
+static inline void dax_write_cache(struct dax_device *dax_dev, bool wc)
+{
+}
+static inline bool dax_write_cache_enabled(struct dax_device *dax_dev)
+{
+	return false;
+}
 #endif
 
 int bdev_dax_pgoff(struct block_device *, sector_t, size_t, pgoff_t *pgoff);

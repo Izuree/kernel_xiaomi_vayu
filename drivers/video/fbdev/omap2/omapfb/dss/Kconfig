@@ -6,7 +6,6 @@ config FB_OMAP2_DSS
         tristate
 	select VIDEOMODE_HELPERS
 	select FB_OMAP2_DSS_INIT
-	select HDMI
 
 config FB_OMAP2_DSS_DEBUG
 	bool "Debug support"

@@ -220,7 +220,6 @@ config VIDEO_ADV7604
 	tristate "Analog Devices ADV7604 decoder"
 	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
 	depends on GPIOLIB || COMPILE_TEST
-	select HDMI
 	select V4L2_FWNODE
 	---help---
 	  Support for the Analog Devices ADV7604 video decoder.
@@ -242,7 +241,6 @@ config VIDEO_ADV7604_CEC
 config VIDEO_ADV7842
 	tristate "Analog Devices ADV7842 decoder"
 	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
-	select HDMI
 	---help---
 	  Support for the Analog Devices ADV7842 video decoder.
 
@@ -346,7 +344,6 @@ config VIDEO_SAA711X
 config VIDEO_TC358743
 	tristate "Toshiba TC358743 decoder"
 	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
-	select HDMI
 	select V4L2_FWNODE
 	---help---
 	  Support for the Toshiba TC358743 HDMI to MIPI CSI-2 bridge.
@@ -496,7 +493,6 @@ config VIDEO_ADV7393
 config VIDEO_ADV7511
 	tristate "Analog Devices ADV7511 encoder"
 	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
-	select HDMI
 	---help---
 	  Support for the Analog Devices ADV7511 video encoder.
 

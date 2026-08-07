@@ -162,6 +162,7 @@ int dm_linear_iterate_devices(struct dm_target *ti,
 }
 EXPORT_SYMBOL_GPL(dm_linear_iterate_devices);
 
+#if IS_ENABLED(CONFIG_DAX)
 long dm_linear_dax_direct_access(struct dm_target *ti, pgoff_t pgoff,
 		long nr_pages, void **kaddr, pfn_t *pfn)
 {
@@ -193,6 +194,12 @@ size_t dm_linear_dax_copy_from_iter(struct dm_target *ti, pgoff_t pgoff,
 	return dax_copy_from_iter(dax_dev, pgoff, addr, bytes, i);
 }
 EXPORT_SYMBOL_GPL(dm_linear_dax_copy_from_iter);
+
+#else
+#define dm_linear_dax_direct_access NULL
+#define dm_linear_dax_copy_from_iter NULL
+#define dm_linear_dax_copy_to_iter NULL
+#endif
 
 static struct target_type linear_target = {
 	.name   = "linear",
