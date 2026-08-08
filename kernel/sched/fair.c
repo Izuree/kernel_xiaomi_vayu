@@ -3430,14 +3430,14 @@ account_entity_dequeue(struct cfs_rq *cfs_rq, struct sched_entity *se)
  */
 #define add_positive(_ptr, _val) do {                           \
 	typeof(_ptr) ptr = (_ptr);                              \
-	typeof(_val) val = (_val);                              \
 	typeof(*ptr) res, var = READ_ONCE(*ptr);                \
-								\
+	s64 val = (_val);                                       \
+	                                                        \
 	res = var + val;                                        \
-								\
+	                                                        \
 	if (val < 0 && res > var)                               \
 		res = 0;                                        \
-								\
+	                                                        \
 	WRITE_ONCE(*ptr, res);                                  \
 } while (0)
 
