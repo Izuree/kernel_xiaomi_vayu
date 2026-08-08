@@ -496,21 +496,17 @@ perf_event_query_prog_array(struct perf_event *event, void __user *info)
 {
 	return -EOPNOTSUPP;
 }
-static inline int bpf_probe_register(struct bpf_raw_event_map *btp, struct bpf_prog *p)
-{
-	return -EOPNOTSUPP;
-}
-static inline int bpf_probe_unregister(struct bpf_raw_event_map *btp, struct bpf_prog *p)
-{
-	return -EOPNOTSUPP;
-}
-static inline struct bpf_raw_event_map *bpf_get_raw_tracepoint(const char *name)
-{
-	return NULL;
-}
-static inline void bpf_put_raw_tracepoint(struct bpf_raw_event_map *btp)
-{
-}
+/*
+ * The raw-tracepoint attach path (kernel/bpf/syscall.c) is compiled
+ * unconditionally, so these four must be real symbols even without
+ * CONFIG_BPF_EVENTS.  With the tracing infrastructure disabled they are
+ * backed by the virtual raw tracepoints in kernel/bpf/tp_stub.c.
+ */
+extern int bpf_probe_register(struct bpf_raw_event_map *btp, struct bpf_prog *prog);
+extern int bpf_probe_unregister(struct bpf_raw_event_map *btp, struct bpf_prog *prog);
+extern struct bpf_raw_event_map *bpf_get_raw_tracepoint(const char *name);
+extern void bpf_put_raw_tracepoint(struct bpf_raw_event_map *btp);
+
 static inline int bpf_get_perf_event_info(const struct perf_event *event,
 					  u32 *prog_id, u32 *fd_type,
 					  const char **buf, u64 *probe_offset,
