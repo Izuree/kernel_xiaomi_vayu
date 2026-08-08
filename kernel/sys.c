@@ -1202,6 +1202,9 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 	} else if (cur_uid >= 1000) {
         strlcpy(tmp.release, "5.10.404R", sizeof(tmp.release));
     }
+#else
+	if (unlikely(ktime_get_boottime_seconds() < 90 && !strcmp(current->comm, "system_server")))
+		strcpy(tmp.release, "4.14.190");
 #endif
 	up_read(&uts_sem);
 	if (copy_to_user(name, &tmp, sizeof(tmp)))
