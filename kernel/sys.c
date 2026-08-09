@@ -1190,7 +1190,7 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 	memcpy(&tmp, utsname(), sizeof(tmp));
 #ifdef CONFIG_ANDROID_16_BPF
 	uid_t cur_uid = current_uid().val;
-	if (current_uid().val == 0 &&
+	if (cur_uid == 0 &&
 		(!strncmp(current->comm, "bpfloader", 9) ||
 		!strncmp(current->comm, "netbpfload", 10) ||
 		!strncmp(current->comm, "uprobestatsbpfload", 18) ||
