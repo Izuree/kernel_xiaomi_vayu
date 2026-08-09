@@ -1199,7 +1199,8 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 		strcpy(tmp.release, "5.15.404");
 		pr_info("fake uname: %s/%d release=%s\n",
 			 current->comm, current->pid, tmp.release);
-	} else if (cur_uid >= 1000) {
+	} else if (cur_uid >= 1000 ||
+		!strcmp(current->comm, "main")) {
         strlcpy(tmp.release, "5.10.404R", sizeof(tmp.release));
     }
 #else
