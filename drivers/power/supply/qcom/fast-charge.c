@@ -20,9 +20,11 @@
 
 static struct kobject *fast_charge_kobj;
 static int force_fast_charge;
+extern bool skip_thermal;
 
 static void fast_charge_apply(bool enable)
 {
+	skip_thermal = enable; 
 	struct votable *fcc_votable     = find_votable("FCC");
 	struct votable *usb_icl_votable = find_votable("USB_ICL");
 

@@ -60,6 +60,8 @@
 static bool off_charge_flag;
 static bool first_boot_flag;
 static int bypass_charging = 0;
+bool skip_thermal;
+EXPORT_SYMBOL(skip_thermal);
 
 bool smblib_rsbux_low(struct smb_charger *chg, int r_thr);
 static int smblib_get_prop_typec_mode(struct smb_charger *chg);
@@ -3449,10 +3451,8 @@ static int smblib_therm_charging(struct smb_charger *chg)
 	int thermal_fcc_ua = 0;
 	int rc;
 
-#ifdef CONFIG_D8G_SERVICE
 	if (skip_thermal || bypass_charging)
 		chg->system_temp_level = 0;
-#endif
 
 	if (chg->system_temp_level >= MAX_TEMP_LEVEL)
 		return 0;
