@@ -35,14 +35,9 @@ struct e404_attributes e404_data = {
     .file_sync                  = 1,
     .panel_width                = 70,
     .panel_height               = 155,
-    .bg_blocklist               = "com.lazada.android,com.tokopedia.tkpd",
     .effcpu                     = 1,
     .fas                        = 1,
 };
-
-static int  blocked_cnt;
-static u8   blocked_len[E404_MAX_BLOCKED];
-static char blocked[E404_MAX_BLOCKED][TASK_COMM_LEN];
 
 static struct kobject *e404_kobj;
 
@@ -97,73 +92,6 @@ static int __init parse_e404_args(char *str)
 }
 early_param("e404_args", parse_e404_args);
 
-bool e404_comm_blocked(const char *comm)
-{
-    int i;
-
-    for (i = 0; i < blocked_cnt; i++) {
-        if (!strncmp(comm,
-                     blocked[i],
-                     blocked_len[i]))
-            return true;
-    }
-
-    return false;
-}
-EXPORT_SYMBOL_GPL(e404_comm_blocked);
-
-static void e404_rebuild_blocklist(char *buf)
-{
-    char *p = buf;
-    char *token;
-
-    blocked_cnt = 0;
-    while ((token = strsep(&p, ",")) &&
-           blocked_cnt < E404_MAX_BLOCKED) {
-
-        if (!*token)
-            continue;
-
-        strscpy(blocked[blocked_cnt],
-                token,
-                TASK_COMM_LEN);
-
-        blocked_len[blocked_cnt] =
-            strlen(blocked[blocked_cnt]);
-
-        pr_alert("E404: blocking '%s'\n", blocked[blocked_cnt]);
-        blocked_cnt++;
-    }
-    pr_alert("E404: total blocked apps = %d\n", blocked_cnt);
-}
-
-static ssize_t bg_blocklist_show(struct kobject *kobj,
-                                 struct kobj_attribute *attr, char *buf)
-{
-    return scnprintf(buf, PAGE_SIZE, "%s\n",
-                     e404_data.bg_blocklist);
-}
-
-static ssize_t bg_blocklist_store(struct kobject *kobj,
-                                  struct kobj_attribute *attr,
-                                  const char *buf, size_t count)
-{
-    char tmp[E404_BLOCKLIST_STRLEN];
-
-    strscpy(tmp, buf, sizeof(tmp));
-    strreplace(tmp, '\n', '\0');
-    strscpy(e404_data.bg_blocklist,
-            tmp,
-            sizeof(e404_data.bg_blocklist));
-
-    e404_rebuild_blocklist(tmp);
-
-    return count;
-}
-
-static struct kobj_attribute bg_blocklist_attr =
-    __ATTR(bg_blocklist, 0664, bg_blocklist_show, bg_blocklist_store);
-
 #define E404_ATTR_RO(name) \
 static ssize_t name##_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
     return sprintf(buf, "%d\n", e404_data.name); \
@@ -199,7 +127,6 @@ E404_ATTR_RW(fas);
 static struct attribute *e404_attrs[] = {
     &kgsl_skip_zeroing_attr.attr,
     &file_sync_attr.attr,
-    &bg_blocklist_attr.attr,
     &fas_attr.attr,
     NULL,
 };
@@ -274,14 +201,8 @@ static struct attribute_group lyb_group = {
 
 static int __init e404_init(void) {
     int ret;
-    char tmp[E404_BLOCKLIST_STRLEN];
 
     e404_parse_attributes();
-
-    if (e404_data.bg_blocklist[0]) {
-        strscpy(tmp, e404_data.bg_blocklist, sizeof(tmp));
-        e404_rebuild_blocklist(tmp);
-    }
 
     e404_kobj = kobject_create_and_add("e404", kernel_kobj);
     if (!e404_kobj)
