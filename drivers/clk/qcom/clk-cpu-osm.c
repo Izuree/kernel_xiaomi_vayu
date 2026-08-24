@@ -90,7 +90,7 @@ struct clk_osm {
 
 static const unsigned long osm_freq_min_normal[] = {
 	[0] = 300000000UL,
-	[1] = 1171200000UL,
+	[1] = 883200000UL,
 	[2] = 825600000UL,
 	[3] = 844800000UL,
 };
@@ -104,7 +104,7 @@ static const unsigned long osm_freq_max_normal[] = {
 
 static const unsigned long osm_freq_min_eff[] = {
 	[0] = 300000000UL,
-	[1] = 1171200000UL,
+	[1] = 883200000UL,
 	[2] = 825600000UL,
 	[3] = 844800000UL,
 };
@@ -118,7 +118,7 @@ static const unsigned long osm_freq_max_eff[] = {
 
 #ifdef CONFIG_E404_ATTRIBUTES
 static const unsigned int e404_little_freqs_eff[] = {
-1171200, 1344000, 1420800, 1612800, 1708800,
+883200, 979200, 1075200, 1171200, 1344000, 1420800, 1612800, 1708800,
 };
 static const unsigned int e404_big_freqs_eff[] = {
 825600, 940800, 1056000, 1171200, 1382400,
@@ -131,7 +131,7 @@ static const unsigned int e404_prime_freqs_eff[] = {
 2265600, 2361600, 2457600, 2553600,
 };
 static const unsigned int e404_little_freqs_def[] = {
-1171200, 1248000, 1344000, 1420800, 1516800,
+883200, 979200, 1075200, 1171200, 1248000, 1344000, 1420800, 1516800,
 1612800, 1708800, 1804800,
 };
 static const unsigned int e404_big_freqs_def[] = {
